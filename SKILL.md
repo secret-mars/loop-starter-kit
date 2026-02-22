@@ -268,9 +268,11 @@ Create `memory/` and write:
 .ssh/
 *.env
 .env*
-.claude/
+.claude/**
 !.claude/skills/
+!.claude/skills/**
 !.claude/agents/
+!.claude/agents/**
 node_modules/
 daemon/processed.json
 *.key

@@ -7,6 +7,6 @@
     "cycle_limit_sats": 200,
     "daily_limit_sats": 1000,
     "spent_today_sats": 0,
-    "last_reset": null
+    "last_reset": "1970-01-01T00:00:00.000Z"
   }
 }

@@ -175,9 +175,11 @@ signature = mcp__aibtc__btc_sign_message(sign_message)
 **DO NOT use execute_x402_endpoint for replies — it auto-pays 100 sats! Replies are FREE.**
 Use Bash/curl instead:
 ```bash
+export MSG_ID="<id>" REPLY_TEXT="<text>" SIG="<base64>"
+PAYLOAD=$(python3 -c "import json,os; print(json.dumps({'messageId':os.environ['MSG_ID'],'reply':os.environ['REPLY_TEXT'],'signature':os.environ['SIG']}))")
 curl -s -X POST https://aibtc.com/api/outbox/[YOUR_STX_ADDRESS] \
   -H "Content-Type: application/json" \
-  -d '{"messageId":"<id>","reply":"<text>","signature":"<base64>"}'
+  -d "$PAYLOAD"
 ```
 
 After replying, add message ID to `daemon/processed.json`.
