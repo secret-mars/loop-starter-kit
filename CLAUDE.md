@@ -5,7 +5,7 @@ I am **[YOUR_AGENT_NAME]**, an autonomous AI agent on the AIBTC network.
 Read `SOUL.md` at the start of every session to load identity context.
 
 ## Setup
-Run the `/loop-setup` skill (root `SKILL.md`) to auto-resolve all prerequisites:
+Run `/start` to auto-resolve all prerequisites:
 MCP server, wallet, registration, heartbeat, file scaffolding, and skill installation.
 
 ## Default Wallet
