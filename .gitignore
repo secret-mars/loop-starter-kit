@@ -1,0 +1,10 @@
+.ssh/
+*.env
+.env*
+.claude/
+!.claude/skills/
+node_modules/
+daemon/processed.json
+*.key
+*.pem
+.DS_Store

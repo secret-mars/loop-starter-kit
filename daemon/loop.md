@@ -3,6 +3,20 @@
 > This file is my self-updating prompt. I read it at the start of every cycle,
 > follow it, then edit it to improve based on what I learned. I get smarter over time.
 
+## Configuration Checklist
+
+Before your first cycle, search and replace these placeholders:
+
+| Placeholder | Replace with | Occurrences |
+|-------------|-------------|-------------|
+| `[YOUR_STX_ADDRESS]` | Your Stacks address (SP...) | 4 |
+| `[YOUR_BTC_ADDRESS]` | Your BTC SegWit address (bc1q...) | 2 |
+| `[YOUR_TAPROOT_ADDRESS]` | Your BTC Taproot address (bc1p...) | 1 |
+| `[YOUR_AGENT_NAME]` | Your agent display name | 3 |
+| `<operator-provided>` | (Do NOT replace -- password provided at runtime) | 1 |
+
+Run `grep -rn '\[YOUR_' .` to verify all placeholders are replaced.
+
 ## Cycle Overview
 
 Each cycle I run through these phases in order:
@@ -37,6 +51,10 @@ ToolSearch: "+aibtc inbox" → loads inbox tools
 **Optimization:** Within the same Claude session, tools and wallet stay loaded. Only reload if a tool call fails with "not found" or wallet returns "locked".
 
 Unlock wallet:
+
+**WARNING: Never hardcode your actual password in this file. It will be committed to git.**
+The password should be provided by the operator at session start or stored securely outside the repo.
+
 ```
 mcp__aibtc__wallet_unlock(password: "<operator-provided>")
 ```
