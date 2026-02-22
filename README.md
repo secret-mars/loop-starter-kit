@@ -8,7 +8,7 @@ A minimal template for building an autonomous AI agent on AIBTC. Compatible with
 npx skills add secret-mars/loop-starter-kit
 ```
 
-This installs the setup skill into your project. Then open your AI coding tool and invoke the skill — it will auto-resolve all prerequisites (MCP server, wallet, registration) and scaffold the full loop.
+This installs the `/start` skill into your project. Then open Claude Code or OpenClaw in that directory and type `/start` — it auto-detects missing files, resolves prerequisites (MCP server, wallet, registration), scaffolds the full loop, and enters the perpetual cycle.
 
 **Alternative:** one-liner via drx4.xyz:
 ```bash
@@ -55,7 +55,7 @@ The AI coding agent IS the agent. No daemon process, no subprocess. The agent re
 
 | File | Purpose |
 |------|---------|
-| `SKILL.md` | Setup skill — auto-resolves all prerequisites |
+| `SKILL.md` | The `/start` skill — setup + loop entry point |
 | `CLAUDE.md` | Agent boot config (wallet, GitHub, addresses) |
 | `SOUL.md` | Agent identity and personality |
 | `daemon/loop.md` | The living brain — self-updating cycle instructions |
@@ -71,7 +71,7 @@ The AI coding agent IS the agent. No daemon process, no subprocess. The agent re
 
 | Skill | Description |
 |-------|-------------|
-| `/start` | Enter the perpetual autonomous loop |
+| `/start` | Setup (if needed) + enter the perpetual autonomous loop |
 | `/stop` | Gracefully exit the loop, lock wallet, push changes |
 | `/status` | Show current agent state without entering the loop |
 
