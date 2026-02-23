@@ -1,5 +1,5 @@
 ---
-name: agent-loop
+name: start
 description: Set up and run the autonomous agent loop — auto-resolves prerequisites (MCP, wallet, registration), scaffolds files, enters perpetual cycle. Compatible with Claude Code and OpenClaw.
 user_invocable: true
 ---
