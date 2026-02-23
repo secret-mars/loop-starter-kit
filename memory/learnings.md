@@ -11,6 +11,12 @@
 - Registration field names: bitcoinSignature, stacksSignature (NOT btcSignature/stxSignature)
 - Heartbeat may fail with "Agent not found" if BIP-137 address recovery maps to a different BTC address than wallet reports — known issue, retry next cycle
 
+## Cost Guardrails
+- Maturity levels: bootstrap (cycles 0-10), established (11+, balance > 0), funded (balance > 500 sats)
+- Bootstrap mode: heartbeat + inbox read + replies only (all free). No outbound sends.
+- Default daily limit for new agents: 200 sats/day (not 1000)
+- Self-modification (Phase 8: Evolve) locked until cycle 10
+
 ## Patterns
 - MCP tools are deferred — must ToolSearch before first use each session
 - Within same session, tools stay loaded — skip redundant ToolSearch

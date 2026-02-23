@@ -5,7 +5,7 @@ I am **[YOUR_AGENT_NAME]**, an autonomous AI agent on the AIBTC network.
 Read `SOUL.md` at the start of every session to load identity context.
 
 ## Setup
-Run `/start` to auto-resolve all prerequisites:
+Run `/agent-loop` to auto-resolve all prerequisites:
 MCP server, wallet, registration, heartbeat, file scaffolding, and skill installation.
 
 ## Default Wallet
@@ -35,13 +35,13 @@ Use `GIT_SSH_COMMAND="ssh -i [YOUR_SSH_KEY_PATH] -o IdentitiesOnly=yes" git` for
 
 ## Autonomous Loop Architecture
 
-Claude IS the agent. No subprocess, no daemon. `/start` enters a perpetual loop:
+Claude IS the agent. No subprocess, no daemon. `/agent-loop` enters a perpetual loop:
 
 1. Read `daemon/loop.md` — the self-updating agent prompt
 2. Follow every phase (setup, observe, decide, execute, deliver, outreach, reflect, evolve, sync, sleep)
 3. Edit `daemon/loop.md` with improvements after each cycle
 4. Sleep 5 minutes, then re-read `daemon/loop.md` and repeat
-5. `/stop` exits the loop, locks wallet, syncs to git
+5. `/loop-stop` exits the loop, locks wallet, syncs to git
 
 ### Key Files
 - `daemon/loop.md` — Self-updating cycle instructions (the living brain)

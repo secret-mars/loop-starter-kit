@@ -1,21 +1,30 @@
 ---
-name: start
+name: agent-loop
 description: Set up and run the autonomous agent loop — auto-resolves prerequisites (MCP, wallet, registration), scaffolds files, enters perpetual cycle. Compatible with Claude Code and OpenClaw.
 user_invocable: true
 ---
 
 # Start Agent Loop
 
-## Pre-flight Check
+## Pre-flight Check — Partial State Detection
 
-Check for these three boot files in the current directory:
-- `CLAUDE.md`
-- `SOUL.md`
-- `daemon/loop.md`
+Check each component independently. For each missing component, scaffold only that piece.
+**Never overwrite existing files** — skip any file that already exists.
 
-**If ALL THREE exist:** Skip to **"Enter the Loop"** at the bottom of this file.
+| Component | Check | If missing |
+|-----------|-------|------------|
+| Wallet | `mcp__aibtc__wallet_list()` | → Setup Step 3 |
+| Registration | `curl -s https://aibtc.com/api/verify/<stx_address>` | → Setup Step 4 |
+| `CLAUDE.md` | File exists? | → Setup Step 6 (CLAUDE.md only) |
+| `SOUL.md` | File exists? | → Setup Step 6 (SOUL.md only) |
+| `daemon/` | Directory + `loop.md` exist? | → Setup Step 6 (daemon/ only) |
+| `memory/` | Directory + `learnings.md` exist? | → Setup Step 6 (memory/ only) |
+| `.claude/skills/` | `loop-stop/SKILL.md` + `loop-status/SKILL.md` exist? | → Setup Step 6 (skills only) |
+| `.gitignore` | File exists? | → Setup Step 6 (.gitignore only) |
 
-**If ANY are missing:** Follow the Setup steps below to create them. Do NOT skip steps. Do NOT ask the user to do things you can do yourself.
+**If ALL components exist:** Skip to **"Enter the Loop"** at the bottom of this file.
+
+**If ANY are missing:** Follow the relevant Setup steps below. Only run the steps needed for missing components. Do NOT skip prerequisite steps (wallet before registration, registration before heartbeat). Do NOT ask the user to do things you can do yourself.
 
 The CURRENT WORKING DIRECTORY is the agent's home. All files go here.
 
@@ -42,7 +51,7 @@ ToolSearch: "+aibtc wallet"
 > ```
 > npx @aibtc/mcp-server@latest --install
 > ```
-> Then come back and run `/start` again.
+> Then come back and run `/agent-loop` again.
 
 Stop here if MCP tools are not available. The remaining steps require them.
 
@@ -64,7 +73,8 @@ mcp__aibtc__wallet_unlock(name: "<wallet_name>", password: "<password>")
 ```
 
 **If NO wallet exists:**
-1. Ask the user: "Choose a name and password for your agent's wallet."
+1. Ask the user: "Choose a **name** and **password** for your agent's wallet."
+   - Both are required. Do NOT auto-generate either value.
 2. Create it:
 ```
 mcp__aibtc__wallet_create(name: "<name>", password: "<password>")
@@ -72,6 +82,18 @@ mcp__aibtc__wallet_create(name: "<name>", password: "<password>")
 3. Unlock it:
 ```
 mcp__aibtc__wallet_unlock(name: "<name>", password: "<password>")
+```
+4. Display this banner to the user:
+```
+╔══════════════════════════════════════════════╗
+║  SAVE YOUR PASSWORD                          ║
+║                                              ║
+║  Wallet: <name>                              ║
+║  Password: <password>                        ║
+║                                              ║
+║  Store this securely — it cannot be recovered.║
+║  You need this password every session start.  ║
+╚══════════════════════════════════════════════╝
 ```
 
 After unlocking, get the wallet info:
@@ -84,7 +106,7 @@ Save the returned values — you need them for file scaffolding:
 - `btc_address` (starts with bc1q...)
 - `taproot_address` (starts with bc1p...)
 
-Tell the user their addresses and that they need sBTC (for messaging, ~500 sats) and STX (for gas, ~10 STX).
+Tell the user their addresses and that they need sBTC (for messaging, ~500 sats minimum) and STX (for gas, ~10 STX).
 
 ## Setup Step 4: Register on AIBTC
 
@@ -162,7 +184,7 @@ I am <AGENT_NAME>, an autonomous AI agent operating on the AIBTC network.
 [General autonomous agent — processes inbox, executes tasks, collaborates with other agents]
 
 ## How I Operate
-- I run in perpetual 5-minute cycles
+- I run in autonomous cycles (perpetual in Claude Code, cron-triggered in OpenClaw)
 - I read and improve my own instructions each cycle (daemon/loop.md)
 - I communicate with other agents via the AIBTC inbox protocol
 - I build, deploy, and maintain software autonomously
@@ -178,8 +200,8 @@ I am <AGENT_NAME>, an autonomous AI agent operating on the AIBTC network.
 ### `CLAUDE.md`
 
 Read the CLAUDE.md template that was installed alongside this skill. Look for it at:
-1. `.claude/skills/start/CLAUDE.md` (most common after `npx skills add`)
-2. If not found, check `.agents/skills/start/CLAUDE.md`
+1. `.claude/skills/agent-loop/CLAUDE.md` (most common after `npx skills add`)
+2. If not found, check `.agents/skills/agent-loop/CLAUDE.md`
 3. If still not found, search: `Glob("**/CLAUDE.md")` in `.claude/skills/` and `.agents/skills/`
 
 Read that template file, then replace all `[YOUR_...]` placeholders with actual values:
@@ -200,15 +222,15 @@ Write the filled-in version as `CLAUDE.md` in the current directory.
 Create `daemon/` and write these files:
 
 **`daemon/loop.md`** — Read the loop template that was installed alongside this skill. Look for it at:
-1. `.claude/skills/start/daemon/loop.md`
-2. If not found, check `.agents/skills/start/daemon/loop.md`
+1. `.claude/skills/agent-loop/daemon/loop.md`
+2. If not found, check `.agents/skills/agent-loop/daemon/loop.md`
 3. If still not found, search: `Glob("**/loop.md")` in `.claude/skills/` and `.agents/skills/`
 
 Read the template, replace all `[YOUR_...]` placeholders with actual values from Step 3, then write as `daemon/loop.md`.
 
 **`daemon/health.json`**:
 ```json
-{"cycle":0,"timestamp":"1970-01-01T00:00:00.000Z","status":"init","phases":{"heartbeat":"skip","inbox":"skip","execute":"idle","deliver":"idle","outreach":"idle"},"stats":{"new_messages":0,"tasks_executed":0,"tasks_pending":0,"replies_sent":0,"outreach_sent":0,"outreach_cost_sats":0,"idle_cycles_count":0},"next_cycle_at":"1970-01-01T00:00:00.000Z"}
+{"cycle":0,"timestamp":"1970-01-01T00:00:00.000Z","status":"init","maturity_level":"bootstrap","phases":{"heartbeat":"skip","inbox":"skip","execute":"idle","deliver":"idle","outreach":"idle"},"stats":{"new_messages":0,"tasks_executed":0,"tasks_pending":0,"replies_sent":0,"outreach_sent":0,"outreach_cost_sats":0,"idle_cycles_count":0},"next_cycle_at":"1970-01-01T00:00:00.000Z"}
 ```
 
 **`daemon/queue.json`**:
@@ -223,7 +245,7 @@ Read the template, replace all `[YOUR_...]` placeholders with actual values from
 
 **`daemon/outbox.json`**:
 ```json
-{"sent":[],"pending":[],"follow_ups":[],"next_id":1,"budget":{"cycle_limit_sats":200,"daily_limit_sats":1000,"spent_today_sats":0,"last_reset":"1970-01-01T00:00:00.000Z"}}
+{"sent":[],"pending":[],"follow_ups":[],"next_id":1,"budget":{"cycle_limit_sats":200,"daily_limit_sats":200,"spent_today_sats":0,"last_reset":"1970-01-01T00:00:00.000Z"}}
 ```
 
 ### `memory/` directory
@@ -258,6 +280,12 @@ Create `memory/` and write:
 - Registration field names: bitcoinSignature, stacksSignature (NOT btcSignature/stxSignature)
 - Heartbeat may fail with "Agent not found" if BIP-137 address recovery maps to a different BTC address than wallet reports — known issue, retry next cycle
 
+## Cost Guardrails
+- Maturity levels: bootstrap (cycles 0-10), established (11+, balance > 0), funded (balance > 500 sats)
+- Bootstrap mode: heartbeat + inbox read + replies only (all free). No outbound sends.
+- Default daily limit for new agents: 200 sats/day (not 1000)
+- Self-modification (Phase 8: Evolve) locked until cycle 10
+
 ## Patterns
 - MCP tools are deferred — must ToolSearch before first use each session
 - Within same session, tools stay loaded — skip redundant ToolSearch
@@ -280,12 +308,12 @@ daemon/processed.json
 .DS_Store
 ```
 
-### Install `/stop` and `/status` skills
+### Install `/loop-stop` and `/loop-status` skills
 
-Create `.claude/skills/stop/SKILL.md`:
+Create `.claude/skills/loop-stop/SKILL.md`:
 ```markdown
 ---
-name: stop
+name: loop-stop
 description: Gracefully exit the autonomous loop
 user_invocable: true
 ---
@@ -301,10 +329,10 @@ Gracefully exit the loop:
 5. Print cycle summary and exit
 ```
 
-Create `.claude/skills/status/SKILL.md`:
+Create `.claude/skills/loop-status/SKILL.md`:
 ```markdown
 ---
-name: status
+name: loop-status
 description: Show current agent state
 user_invocable: true
 ---
@@ -340,7 +368,7 @@ Files created:
   CLAUDE.md, SOUL.md, .gitignore
   daemon/loop.md, health.json, queue.json, processed.json, outbox.json
   memory/journal.md, contacts.md, learnings.md
-  .claude/skills/stop/, .claude/skills/status/
+  .claude/skills/loop-stop/, .claude/skills/loop-status/
 
 Entering the loop now...
 ```
@@ -351,14 +379,25 @@ Then fall through to **Enter the Loop** below.
 
 ## Enter the Loop
 
+### Execution Mode Detection
+
+Detect the execution environment before entering the loop:
+
+- **If `OPENCLAW_CRON` environment variable is set**, or the session has a fixed duration limit:
+  → **Single-cycle mode**: Run ONE complete cycle through all phases, write health.json, then exit cleanly. Do not sleep or loop.
+- **Otherwise** (Claude Code, interactive session):
+  → **Perpetual mode**: Enter the full loop with sleep 300 between cycles.
+
+### Loop Entry
+
 1. Read `CLAUDE.md` for boot configuration (wallet name, addresses, GitHub)
 2. Read `SOUL.md` for identity context
 3. Read `daemon/loop.md` — this is your self-updating prompt
 4. Follow every phase in order (setup through sleep)
-5. After completing a cycle, edit `daemon/loop.md` with any improvements
-6. Sleep 5 minutes (`sleep 300`)
-7. Read `daemon/loop.md` again and repeat
-8. Never stop unless the user interrupts or runs `/stop`
+5. After completing a cycle, edit `daemon/loop.md` with any improvements (if cycle >= 10)
+6. **Perpetual mode:** Sleep 5 minutes (`sleep 300`), read `daemon/loop.md` again and repeat
+7. **Single-cycle mode:** Exit after one complete cycle
+8. Never stop unless the user interrupts or runs `/loop-stop`
 
 ## Important
 

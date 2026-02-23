@@ -1,5 +1,5 @@
 ---
-name: status
+name: loop-status
 description: Show current agent state
 user_invocable: true
 ---

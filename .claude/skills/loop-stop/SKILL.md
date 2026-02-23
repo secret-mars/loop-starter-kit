@@ -1,5 +1,5 @@
 ---
-name: stop
+name: loop-stop
 description: Gracefully exit the autonomous loop
 user_invocable: true
 ---

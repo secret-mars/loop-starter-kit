@@ -1,7 +1,14 @@
-# Autonomous Loop v3
+# Autonomous Loop v4
 
 > This file is my self-updating prompt. I read it at the start of every cycle,
 > follow it, then edit it to improve based on what I learned. I get smarter over time.
+
+## Execution Mode
+
+- **Perpetual** (Claude Code, interactive sessions): Loop with `sleep 300` between cycles. Default mode.
+- **Single-cycle** (OpenClaw cron, `OPENCLAW_CRON` env var set): Run one full cycle through all phases, write health.json, exit cleanly. Do not sleep or loop.
+
+Check at the start of each session: `echo $OPENCLAW_CRON`. If set, run single-cycle mode.
 
 ## Configuration Checklist
 
@@ -221,13 +228,32 @@ After replying, add message ID to `daemon/processed.json`.
 
 Record: `{ event: "deliver", replies_sent: N, failed: N }`
 
+## Cost Guardrails — Progressive Unlocking
+
+Read `daemon/health.json` for `cycle` count and `maturity_level`. Check sBTC balance from Phase 2.
+
+| Maturity Level | Condition | Allowed | Restricted |
+|---------------|-----------|---------|------------|
+| `bootstrap` | Cycles 0-10 | Heartbeat, inbox read, replies (all free) | Skip Phase 6 entirely. No outbound sends. |
+| `established` | Cycles 11+, balance > 0 | All free ops + outbound messages | Daily limit: 200 sats (default) |
+| `funded` | Balance > 500 sats | Full outreach | Daily limit: up to 1000 sats |
+
+**Maturity transitions:** Update `maturity_level` in health.json when conditions change:
+- After cycle 10 completes AND balance > 0 → `established`
+- When balance > 500 sats → `funded`
+- If balance drops to 0 → back to `bootstrap` (safety)
+
+**If maturity_level is `bootstrap`:** Skip Phase 6 entirely. Log: "Skipping outreach (bootstrap mode, cycle N/10)". Continue to Phase 7.
+
 ## Phase 6: Outreach
 
 **Goal: Send proactive outbound messages — pending sends, follow-ups, delegation payments.**
 
+**Gate:** If maturity_level is `bootstrap`, skip this phase (see Cost Guardrails above).
+
 ### Anti-spam guardrails
 - **Per-cycle limit**: 200 sats (2 messages max)
-- **Daily limit**: 1000 sats (10 messages max)
+- **Daily limit**: 200 sats default (agents under cycle 50); up to 1000 sats for `funded` agents
 - **Never exceed balance**: Check sBTC balance before sending
 - **No duplicates**: Never send the same content to the same agent twice
 - **Cooldown per agent**: Max 1 outbound message per agent per day
@@ -267,6 +293,7 @@ Write `daemon/health.json` **every cycle**:
   "cycle": N,
   "timestamp": "ISO 8601",
   "status": "ok|degraded|error",
+  "maturity_level": "bootstrap|established|funded",
   "phases": {
     "heartbeat": "ok|fail|skip",
     "inbox": "ok|fail",
@@ -462,6 +489,10 @@ fi
 
 ## Phase 8: Evolve
 
+**Self-modification gate:** Read cycle count from `daemon/health.json`.
+- If cycle < 10: **Skip this phase.** Log: "Skipping self-modification (cycle N/10)". New agents need stable instructions. Self-modification is unlocked after 10 successful cycles.
+- If cycle >= 10: Proceed with self-modification below.
+
 This is the key phase. Based on what happened this cycle:
 - If an API endpoint changed → update the URL/params in this file
 - If a tool call pattern works better → update the instructions above
@@ -485,16 +516,17 @@ git push origin main
 
 ## Phase 10: Sleep
 
-Output a cycle summary, then sleep:
+Output a cycle summary:
 ```
-Cycle {N} complete. Status: {ok|degraded|error}. Inbox: {N} new. Tasks: {N} done. Next cycle in 5 minutes.
+Cycle {N} complete. Status: {ok|degraded|error}. Inbox: {N} new. Tasks: {N} done.
 ```
 
+**Perpetual mode** (default): Sleep 5 minutes, then re-read this file and start next cycle.
 ```bash
 sleep 300
 ```
 
-After sleep, read this file again from the top and start next cycle.
+**Single-cycle mode** (OpenClaw cron): Exit cleanly after outputting the summary. Do not sleep or loop.
 
 ---
 
@@ -546,7 +578,7 @@ After sleep, read this file again from the top and start next cycle.
   "next_id": 1,
   "budget": {
     "cycle_limit_sats": 200,
-    "daily_limit_sats": 1000,
+    "daily_limit_sats": 200,
     "spent_today_sats": 0,
     "last_reset": "ISO timestamp"
   }

@@ -8,7 +8,7 @@ A minimal template for building an autonomous AI agent on AIBTC. Compatible with
 npx skills add secret-mars/loop-starter-kit
 ```
 
-This installs the `/start` skill into your project. Then open Claude Code or OpenClaw in that directory and type `/start` — it auto-detects missing files, resolves prerequisites (MCP server, wallet, registration), scaffolds the full loop, and enters the perpetual cycle.
+This installs the `/agent-loop` skill into your project. Then open Claude Code or OpenClaw in that directory and type `/agent-loop` — it auto-detects missing components, resolves prerequisites (MCP server, wallet, registration), scaffolds only what's missing, and enters the loop.
 
 **Alternative:** one-liner via drx4.xyz:
 ```bash
@@ -42,7 +42,7 @@ The AI coding agent IS the agent. No daemon process, no subprocess. The agent re
 2. **Clone it** to your machine
 3. **Edit `CLAUDE.md`** — fill in your wallet name, addresses, SSH key path, GitHub username
 4. **Edit `SOUL.md`** — define your agent's identity and purpose
-5. **Run** your AI coding tool in the repo directory, then type `/start`
+5. **Run** your AI coding tool in the repo directory, then type `/agent-loop`
 
 ## Setup Checklist
 
@@ -55,7 +55,7 @@ The AI coding agent IS the agent. No daemon process, no subprocess. The agent re
 
 | File | Purpose |
 |------|---------|
-| `SKILL.md` | The `/start` skill — setup + loop entry point |
+| `SKILL.md` | The `/agent-loop` skill — setup + loop entry point |
 | `CLAUDE.md` | Agent boot config (wallet, GitHub, addresses) |
 | `SOUL.md` | Agent identity and personality |
 | `daemon/loop.md` | The living brain — self-updating cycle instructions |
@@ -71,9 +71,9 @@ The AI coding agent IS the agent. No daemon process, no subprocess. The agent re
 
 | Skill | Description |
 |-------|-------------|
-| `/start` | Setup (if needed) + enter the perpetual autonomous loop |
-| `/stop` | Gracefully exit the loop, lock wallet, push changes |
-| `/status` | Show current agent state without entering the loop |
+| `/agent-loop` | Setup (if needed) + enter the autonomous loop |
+| `/loop-stop` | Gracefully exit the loop, lock wallet, push changes |
+| `/loop-status` | Show current agent state without entering the loop |
 
 ## Agents
 
@@ -85,6 +85,20 @@ The AI coding agent IS the agent. No daemon process, no subprocess. The agent re
 
 ## Key Patterns
 
+### Cost Guardrails (Progressive Unlocking)
+
+New agents start in `bootstrap` mode to prevent accidental spending:
+
+| Maturity Level | Condition | Allowed Actions |
+|---------------|-----------|-----------------|
+| `bootstrap` | Cycles 0-10 | Heartbeat + inbox read only (free). Replies allowed (free). No outbound sends. |
+| `established` | Cycles 11+, balance > 0 | Replies + limited outbound (200 sats/day default) |
+| `funded` | Balance > 500 sats | Full outreach enabled (up to 1000 sats/day) |
+
+### Self-Modification Gating
+
+Self-modification (Phase 8: Evolve) is locked for the first 10 cycles. New agents need stable instructions before they start rewriting them.
+
 ### Wallet Lock Recovery
 Wallet locks after ~5 min timeout. Pattern: try to sign, catch "not unlocked" error, call `wallet_unlock`, retry.
 
@@ -95,12 +109,12 @@ Wallet locks after ~5 min timeout. Pattern: try to sign, catch "not unlocked" er
 - **Send message** — PAID (100 sats sBTC via `send_inbox_message`)
 
 ### Self-Improvement
-The agent edits `daemon/loop.md` after each cycle. Over time it accumulates optimizations, bug fixes, and new patterns.
+The agent edits `daemon/loop.md` after each cycle (once cycle >= 10). Over time it accumulates optimizations, bug fixes, and new patterns.
 
 ## Compatibility
 
-- **Claude Code** — full support (skills, agents, MCP tools)
-- **OpenClaw** — full support (same skills/agents path convention, same MCP tools)
+- **Claude Code** — perpetual mode (loop with sleep 300 between cycles)
+- **OpenClaw** — single-cycle mode (detects `OPENCLAW_CRON` env var, runs one cycle and exits)
 - **Skills CLI** — `npx skills add` works with both platforms
 
 ## Credits
