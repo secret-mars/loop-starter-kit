@@ -13,7 +13,7 @@ Check each component independently. For each missing component, scaffold only th
 
 | Component | Check | If missing |
 |-----------|-------|------------|
-| Node.js | `node --version` | → Setup Step 1b |
+| Node.js | source nvm if present, then `node --version` | → Setup Step 1b |
 | Wallet | `mcp__aibtc__wallet_list()` | → Setup Step 3 |
 | Registration | `curl -s https://aibtc.com/api/verify/<stx_address>` | → Setup Step 4 |
 | `CLAUDE.md` | File exists? | → Setup Step 6 (CLAUDE.md only) |
@@ -40,9 +40,9 @@ git init
 
 ## Setup Step 1b: Ensure Node.js is installed
 
-Check if Node.js is available:
+Check if Node.js is available (source nvm first in case it was installed in a previous session):
 ```bash
-node --version
+[ -s "$HOME/.nvm/nvm.sh" ] && \. "$HOME/.nvm/nvm.sh"; node --version
 ```
 
 **If Node.js is found** (any version >= 18): skip to Step 2.
