@@ -89,6 +89,21 @@ ToolSearch: "+aibtc wallet"
 npx @aibtc/mcp-server@latest --install
 ```
 
+After install, patch `.mcp.json` so the MCP server can find `npx` on restart. The installer writes `"command": "npx"` (bare), which fails if `$HOME/.node/bin` isn't on the system PATH. Fix it by using the absolute path:
+```bash
+NPX_PATH=$(which npx)
+if [ -f .mcp.json ] && [ -n "$NPX_PATH" ]; then
+  sed -i "s|\"command\": \"npx\"|\"command\": \"$NPX_PATH\"|" .mcp.json
+fi
+```
+
+Verify the fix:
+```bash
+cat .mcp.json
+```
+
+The `"command"` field should now show the full path (e.g. `"/root/.node/bin/npx"` or `"/home/user/.node/bin/npx"`).
+
 After install completes, tell the user:
 > MCP server installed. **Restart your Claude Code / OpenClaw session** so the new MCP server loads, then run `/start` again.
 
