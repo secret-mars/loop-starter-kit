@@ -8,7 +8,9 @@ user_invocable: true
 
 ## Pre-flight Check — Partial State Detection
 
-Check each component independently. For each missing component, scaffold only that piece.
+**Fast path:** If `CLAUDE.md`, `SOUL.md`, `daemon/loop.md`, and `memory/learnings.md` ALL exist, the agent is already set up. Skip directly to **"Enter the Loop"** at the bottom of this file.
+
+**Otherwise**, check each component independently. For each missing component, scaffold only that piece.
 **Never overwrite existing files** — skip any file that already exists.
 
 | Component | Check | If missing |
