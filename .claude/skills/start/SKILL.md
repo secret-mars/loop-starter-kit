@@ -47,24 +47,20 @@ node --version
 
 **If Node.js is found** (any version >= 18): skip to Step 2.
 
-**If NOT found:** Install the official Node.js LTS binary:
+**If NOT found:** Install Node.js via nvm (official method from nodejs.org):
 ```bash
-ARCH=$(uname -m)
-case "$ARCH" in x86_64) ARCH="x64";; aarch64|arm64) ARCH="arm64";; esac
-OS=$(uname -s | tr '[:upper:]' '[:lower:]')
-mkdir -p "$HOME/.node"
-curl -fsSL "https://nodejs.org/dist/v22.14.0/node-v22.14.0-${OS}-${ARCH}.tar.xz" | tar -xJ -C "$HOME/.node" --strip-components=1
-export PATH="$HOME/.node/bin:$PATH"
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.4/install.sh | bash
+```
+
+Load nvm into the current shell and install Node.js:
+```bash
+\. "$HOME/.nvm/nvm.sh"
+nvm install 24
 ```
 
 Verify it works:
 ```bash
-node --version && npx --version
-```
-
-If both commands succeed, also persist the PATH for future shells:
-```bash
-echo 'export PATH="$HOME/.node/bin:$PATH"' >> ~/.bashrc 2>/dev/null || echo 'export PATH="$HOME/.node/bin:$PATH"' >> ~/.zshrc
+node -v && npm -v
 ```
 
 **If install fails** (no curl, network issues, etc): Tell the user:
