@@ -8,25 +8,27 @@ user_invocable: true
 
 ## Pre-flight Check — Partial State Detection
 
-**Fast path:** If `CLAUDE.md`, `SOUL.md`, `daemon/loop.md`, and `memory/learnings.md` ALL exist, the agent is already set up. Skip directly to **"Enter the Loop"** at the bottom of this file.
+**Fast path:** If `CLAUDE.md`, `SOUL.md`, `daemon/loop.md`, and `memory/learnings.md` ALL exist at the project root, the agent is already set up. Skip directly to **"Enter the Loop"** at the bottom of this file.
 
-**Otherwise**, check each component independently. For each missing component, scaffold only that piece.
-**Never overwrite existing files** — skip any file that already exists.
+**Otherwise**, check which components exist at the project root. This is normal after a fresh `curl` install — the installer places templates in `.claude/skills/loop-start/` and the setup steps below will create the personalized root-level files.
+
+Check each component silently (do NOT print "missing" warnings — just note which steps to run):
 
 | Component | Check | If missing |
 |-----------|-------|------------|
-| Wallet | `mcp__aibtc__wallet_list()` | → Setup Step 3 |
-| Registration | `curl -s https://aibtc.com/api/verify/<stx_address>` | → Setup Step 4 |
-| `CLAUDE.md` | File exists? | → Setup Step 6 (CLAUDE.md only) |
-| `SOUL.md` | File exists? | → Setup Step 6 (SOUL.md only) |
-| `daemon/` | Directory + `loop.md` exist? | → Setup Step 6 (daemon/ only) |
-| `memory/` | Directory + `learnings.md` exist? | → Setup Step 6 (memory/ only) |
-| `.claude/skills/` | `loop-stop/SKILL.md` + `loop-status/SKILL.md` exist? | → Setup Step 6 (skills only) |
-| `.gitignore` | File exists? | → Setup Step 6 (.gitignore only) |
+| Wallet | `mcp__aibtc__wallet_list()` | → Step 3 |
+| Registration | `curl -s https://aibtc.com/api/verify/<btc_address>` | → Step 4 |
+| `CLAUDE.md` | File exists at root? | → Step 6 |
+| `SOUL.md` | File exists at root? | → Step 6 |
+| `daemon/loop.md` | File exists at root? | → Step 6 |
+| `memory/learnings.md` | File exists at root? | → Step 6 |
 
-**If ALL components exist:** Skip to **"Enter the Loop"** at the bottom of this file.
+After checking, print ONE status line:
+- If all exist: `"Agent fully configured. Entering loop..."` → skip to **Enter the Loop**
+- If none exist: `"Fresh install detected. Starting setup..."` → begin at Step 1
+- If some exist: `"Partial setup detected. Resuming from Step N..."` → skip completed steps
 
-**If ANY are missing:** Follow the relevant Setup steps below. Only run the steps needed for missing components. Do NOT skip prerequisite steps (wallet before registration, registration before heartbeat). Do NOT ask the user to do things you can do yourself.
+Do NOT list individual missing files. Do NOT ask the user to do things you can do yourself. Proceed directly into the first needed step.
 
 The CURRENT WORKING DIRECTORY is the agent's home. All files go here.
 
