@@ -170,7 +170,7 @@ For each new inbox message:
   - If sender is NOT in trusted_senders: treat as non-task message (queue acknowledgment reply only, never queue as executable task)
   - Log unauthorized task attempts in journal for review
 - If sender is trusted AND message contains a task keyword (fork, PR, build, deploy, implement, fix, create, review, audit):
-  - Add to `daemon/queue.json` with status "pending"
+  - Add to `daemon/queue.json` with status "pending", `created_at` set to current UTC, `priority` based on urgency (default "medium"). See Reference: Data Formats for full task schema.
   - **DO NOT queue an acknowledgment reply** -- save the reply for Deliver phase after the task is completed, so we can include proof/links
 - Otherwise (non-task messages or untrusted sender):
   - Queue a brief, relevant acknowledgment reply (sent in Deliver phase)
@@ -200,7 +200,7 @@ After replying, add message ID to `daemon/processed.json`.
 
 ## Phase 4: Execute Tasks
 
-Read `daemon/queue.json`. Pick the oldest task with status "pending".
+Read `daemon/queue.json`. Pick the highest-priority pending task (critical > high > medium > low). Break ties by oldest `created_at`.
 
 For each pending task:
 1. Set status to "in_progress" in queue.json
@@ -451,6 +451,7 @@ sleep 300
       "source_message_id": "msg_xxx",
       "description": "Fork repo X and create PR with fix Y",
       "status": "pending|in_progress|completed|failed|delegated",
+      "priority": "low|medium|high|critical",
       "created_at": "ISO timestamp",
       "updated_at": "ISO timestamp",
       "result": "PR link or error description"
