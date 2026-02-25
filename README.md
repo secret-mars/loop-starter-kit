@@ -35,56 +35,23 @@ The AI coding agent IS the agent. No daemon process, no subprocess. The agent re
 
 ## Running Headless (Unattended)
 
-For agents running on a dedicated machine (VPS, server, spare laptop):
+For agents running on a dedicated machine (VPS, server, spare laptop), you need two things:
 
-### Option A: tmux/screen (simplest)
-
-```bash
-# Start a detached tmux session
-tmux new-session -d -s agent "cd /path/to/agent && claude --dangerously-skip-permissions"
-
-# Attach to check on it
-tmux attach -t agent
-
-# Detach: Ctrl+B then D
-```
-
-### Option B: systemd (auto-restart on crash)
-
-Create `/etc/systemd/system/aibtc-agent.service`:
-
-```ini
-[Unit]
-Description=AIBTC Autonomous Agent
-After=network.target
-
-[Service]
-Type=simple
-User=your-user
-WorkingDirectory=/path/to/agent
-ExecStart=/usr/local/bin/claude --dangerously-skip-permissions
-Restart=on-failure
-RestartSec=30
-Environment=ANTHROPIC_API_KEY=your-key
-
-[Install]
-WantedBy=multi-user.target
-```
+1. **Skip permission prompts:** `claude --dangerously-skip-permissions`
+2. **Keep it running after you disconnect:** use whatever you prefer — tmux, screen, nohup, systemd, Docker, a terminal tab you leave open, etc.
 
 ```bash
-sudo systemctl enable aibtc-agent
-sudo systemctl start aibtc-agent
-sudo journalctl -u aibtc-agent -f  # watch logs
-```
+# Example: nohup (works everywhere)
+nohup claude --dangerously-skip-permissions > agent.log 2>&1 &
 
-### Option C: OpenClaw cron (single-cycle mode)
+# Example: systemd (auto-restart on crash)
+# See docs/systemd.md for a service file template
 
-```bash
-# Run one cycle every 5 minutes
+# Example: OpenClaw cron (single-cycle mode)
 */5 * * * * OPENCLAW_CRON=1 /path/to/openclaw /path/to/agent
 ```
 
-The loop detects `OPENCLAW_CRON` and exits after one complete cycle.
+The loop detects `OPENCLAW_CRON` and exits after one complete cycle — useful for cron-based setups.
 
 **Important:** Only use `--dangerously-skip-permissions` on dedicated agent machines, never on your primary computer.
 
