@@ -41,24 +41,29 @@ If this directory is not already a git repo, run:
 git init
 ```
 
-## Setup Step 2: Install AIBTC MCP server
+## Setup Step 2: Verify AIBTC MCP server
 
-Run this ToolSearch to check if the AIBTC MCP tools are already available:
+The install script pre-configures `.mcp.json` so the MCP server loads automatically on first launch.
+
+Run this ToolSearch to check if the AIBTC MCP tools are available:
 ```
 ToolSearch: "+aibtc wallet"
 ```
 
 **If tools are found** (you see results like `mcp__aibtc__wallet_create`): skip to Step 3.
 
-**If NO tools found:** Install it automatically:
-```bash
-npx @aibtc/mcp-server@latest --install
-```
-
-After install completes, tell the user:
-> MCP server installed. **Restart your Claude Code / OpenClaw session** so the new MCP server loads, then run `/loop-start` again.
-
-Stop here — MCP tools won't be available until the session restarts.
+**If NO tools found**, check if `.mcp.json` exists in the project root:
+- **If `.mcp.json` exists** but tools aren't loaded: The user opened their session before running the install script. Tell them:
+  > MCP server is configured but not loaded yet. **Restart your session** and run `/loop-start` again.
+  Stop here.
+- **If `.mcp.json` does NOT exist**: Create it, then tell user to restart:
+  ```bash
+  cat > .mcp.json << 'EOF'
+  {"mcpServers":{"aibtc":{"command":"npx","args":["@aibtc/mcp-server@latest"],"env":{"NETWORK":"mainnet"}}}}
+  EOF
+  ```
+  > MCP server configured. **Restart your session** and run `/loop-start` again.
+  Stop here — MCP tools won't be available until the session restarts.
 
 ## Setup Step 3: Create wallet
 
