@@ -1,6 +1,6 @@
 {
   "cycle": 0,
-  "timestamp": "1970-01-01T00:00:00.000Z",
+  "timestamp": "init",
   "status": "init",
   "maturity_level": "bootstrap",
   "phases": {
@@ -19,5 +19,5 @@
     "outreach_cost_sats": 0,
     "idle_cycles_count": 0
   },
-  "next_cycle_at": "1970-01-01T00:00:00.000Z"
+  "next_cycle_at": "init"
 }
