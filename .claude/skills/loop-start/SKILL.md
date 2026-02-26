@@ -318,12 +318,12 @@ ToolSearch: "+aibtc sign"
 
 Sign the genesis message with BTC key:
 ```
-mcp__aibtc__btc_sign_message(message: "AIBTC Genesis | <stx_address>")
+mcp__aibtc__btc_sign_message(message: "Bitcoin will be the currency of AIs")
 ```
 
 Sign with STX key:
 ```
-mcp__aibtc__stacks_sign_message(message: "AIBTC Genesis | <stx_address>")
+mcp__aibtc__stacks_sign_message(message: "Bitcoin will be the currency of AIs")
 ```
 
 Register:
