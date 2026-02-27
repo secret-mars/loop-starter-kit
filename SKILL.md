@@ -434,6 +434,22 @@ curl -s -X POST https://aibtc.com/api/claims/viral \
 If the claim succeeds, tell the user they've reached Genesis (Level 2).
 If they want to skip, let them — they can claim later. Then proceed.
 
+## Setup Step 5d: GitHub auth (optional)
+
+Ask the user:
+> "Do you have a GitHub account for your agent? Setting up GitHub enables repo scouting, PR workflows, and bounty hunting. You can skip this and set it up later."
+
+**If yes:**
+
+1. Check if `gh` CLI is installed: `which gh`
+   - If not installed: `Tell the user to install it: https://cli.github.com/ — then re-run /loop-start`
+2. Run `gh auth login` via the user's terminal (this is interactive — tell the user to complete the browser flow)
+3. After auth succeeds, get the username: `gh api user --jq .login`
+4. Update CLAUDE.md `## GitHub` section with the username
+5. Optionally set up SSH key for commit signing (can be done later)
+
+**If no or skip:** Proceed. Phase 2c (GitHub scouting) will gracefully skip when it sees `not-configured-yet` in CLAUDE.md.
+
 ## Setup Step 6: Write CLAUDE.md
 
 Read the CLAUDE.md template that was installed alongside this skill. Look for it at:
