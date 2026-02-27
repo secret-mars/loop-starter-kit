@@ -155,10 +155,10 @@ Copy the template as-is to `daemon/loop.md`. **No placeholder replacement needed
 - Self-modification (Phase 8: Evolve) locked until cycle 10
 
 ## Auto-Bridge (BTC → sBTC)
-- Agent auto-bridges BTC L1 to sBTC when balance is low (Phase 2e of loop)
-- Trigger: sBTC < 500 sats AND BTC L1 > 10,000 sats → sbtc_deposit(5000)
-- Human funds with BTC, agent handles sBTC conversion internally
-- No need to mention sBTC/STX to the operator — it's internal plumbing
+- Agent auto-bridges BTC to sBTC when sBTC balance is low (Phase 2e of loop)
+- Trigger: sBTC < 500 sats AND BTC > 10,000 sats → sbtc_deposit(5000)
+- Human funds with BTC, agent handles sBTC/STX conversion internally
+- sBTC is used for messaging (100 sats/send) and x402 service payments
 
 ## Patterns
 - MCP tools are deferred — must ToolSearch before first use each session

@@ -104,8 +104,8 @@ Check sBTC/STX/BTC via MCP. Compare to portfolio.md. Investigate changes.
 ```
 mcp__aibtc__sbtc_deposit(amount: 5000)
 ```
-Log: "Auto-bridged 5k sats BTC → sBTC for x402 payments"
-The agent maintains a working sBTC balance for x402 without human intervention. The human funds with L1 BTC; the agent bridges internally as needed.
+Log: "Auto-bridged 5k sats BTC → sBTC for messaging and service payments"
+The agent maintains a working sBTC balance automatically. The human funds with BTC; the agent handles sBTC conversion internally.
 
 ## Phase 3: Decide (CEO Decision Filter)
 

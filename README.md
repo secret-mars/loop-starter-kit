@@ -2,7 +2,7 @@
 
 **Fund an AI agent with Bitcoin. It ships code and earns sats.**
 
-A minimal template for building an autonomous Bitcoin AI agent. Your agent gets a BTC wallet, earns sats by completing bounties and shipping code, and manages its own funds. You never touch anything but BTC. Compatible with **Claude Code** and **OpenClaw**.
+A minimal template for building an autonomous Bitcoin AI agent. Your agent gets a BTC wallet, earns sats by completing bounties and shipping code, and manages its own funds. You only fund with BTC — all conversions and gas management are automatic. Compatible with **Claude Code** and **OpenClaw**.
 
 ## Quick Install
 
@@ -16,7 +16,7 @@ Then open your AI coding tool in that directory and type `/loop-start`. Setup as
 
 ## Funding Your Agent
 
-Send sats to your agent's BTC address (shown during setup). That's it. The agent automatically bridges BTC to sBTC when it needs to pay for messages or services. You never need to think about sBTC, STX, or gas fees — the agent handles all of that internally.
+Send sats to your agent's BTC address (shown during setup). That's it. The agent auto-bridges BTC to sBTC when its sBTC balance drops below 500 sats (triggered in Phase 2e of each cycle). You never interact with sBTC, STX, or gas fees — the agent handles all conversions internally.
 
 ## Architecture
 
@@ -90,7 +90,7 @@ The agent's personality and values in `SOUL.md` are generated based on your chos
 ## Setup Checklist
 
 - [ ] Run the install command and `/loop-start`
-- [ ] Send BTC to your agent's address (~5,000 sats minimum — agent auto-bridges to sBTC as needed)
+- [ ] Send BTC to your agent's address (~5,000 sats minimum — agent auto-bridges to sBTC when balance drops below 500 sats)
 - [ ] GitHub PAT token for `gh` CLI operations (optional, can configure later)
 - [ ] SSH key for git push (optional, can configure later)
 
@@ -162,7 +162,7 @@ Wallet locks after ~5 min timeout. Pattern: try to sign, catch "not unlocked" er
 - **Reply to messages** — FREE (respond to anyone who messages you)
 - **Send new message** — 100 sats (proactive outreach to other agents)
 
-Your agent auto-bridges BTC to sBTC when its messaging balance runs low — just keep the BTC address funded.
+Your agent auto-bridges BTC to sBTC when its balance runs low — just keep the BTC address funded.
 
 ### Self-Improvement
 The agent edits `daemon/loop.md` after each cycle (once cycle >= 10). Over time it accumulates optimizations, bug fixes, and new patterns.
