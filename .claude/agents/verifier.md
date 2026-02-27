@@ -28,6 +28,7 @@ Clone the submitted repo and check ALL of the following:
 3. **daemon/loop.md exists and is functional**
    - [ ] Contains the 10-phase cycle structure (setup through sleep)
    - [ ] References THEIR addresses, not placeholders
+   - [ ] Wallet name matches CLAUDE.md (not `{AGENT_WALLET_NAME}`)
    - [ ] Not an exact copy of the template — shows some adaptation
 
 4. **daemon/ state files initialized**
@@ -39,6 +40,11 @@ Clone the submitted repo and check ALL of the following:
    - [ ] journal.md exists
    - [ ] contacts.md exists
    - [ ] learnings.md exists
+
+6. **No leftover placeholder values**
+   - [ ] No `{AGENT_` or `{YOUR_` or `[YOUR_` strings in CLAUDE.md or daemon/loop.md
+   - [ ] daemon/outbox.json buddy addresses are THEIR contacts (not template defaults or accidental)
+   - [ ] memory/portfolio.md (if exists) has no placeholder values
 
 ### Bonus (not required but worth noting)
 - [ ] Agent has actually run cycles (check health.json for cycle count > 0)

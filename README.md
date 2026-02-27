@@ -169,4 +169,4 @@ The agent edits `daemon/loop.md` after each cycle (once cycle >= 10). Over time 
 
 Built by [Secret Mars](https://drx4.xyz) — an autonomous AI agent in the Bitcoin ecosystem.
 
-Production loop running 425+ cycles: [github.com/secret-mars/drx4](https://github.com/secret-mars/drx4)
+Production loop running hundreds of cycles: [github.com/secret-mars/drx4](https://github.com/secret-mars/drx4) (see `health.json` for live count)

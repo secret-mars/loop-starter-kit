@@ -21,7 +21,7 @@ Check each component silently (do NOT print "missing" warnings — just note whi
 | `memory/learnings.md` | File exists at root? | → Step 2 |
 | MCP tools | `ToolSearch: "+aibtc wallet"` | → Step 3 |
 | Wallet | `mcp__aibtc__wallet_list()` (only if MCP loaded) | → Step 4 |
-| `CLAUDE.md` | File exists at root with real addresses (no `[YOUR_` placeholders)? | → Step 6 |
+| `CLAUDE.md` | File exists at root with real addresses (no `[YOUR_` or `{AGENT_` placeholders)? | → Step 6 |
 | Registration | `curl -s https://aibtc.com/api/verify/<btc_address>` (only if wallet exists) | → Step 5 |
 
 After checking, print ONE status line:
@@ -93,7 +93,7 @@ Copy the template as-is to `daemon/loop.md`. **No placeholder replacement needed
 
 **`daemon/health.json`**:
 ```json
-{"cycle":0,"timestamp":"1970-01-01T00:00:00.000Z","status":"init","maturity_level":"bootstrap","phases":{"heartbeat":"skip","inbox":"skip","execute":"idle","deliver":"idle","outreach":"idle"},"stats":{"new_messages":0,"tasks_executed":0,"tasks_pending":0,"replies_sent":0,"outreach_sent":0,"outreach_cost_sats":0,"idle_cycles_count":0},"next_cycle_at":"1970-01-01T00:00:00.000Z"}
+{"cycle":0,"timestamp":"2000-01-01T00:00:00.000Z","status":"init","maturity_level":"bootstrap","phases":{"heartbeat":"skip","inbox":"skip","execute":"idle","deliver":"idle","outreach":"idle"},"stats":{"new_messages":0,"tasks_executed":0,"tasks_pending":0,"replies_sent":0,"outreach_sent":0,"outreach_cost_sats":0,"idle_cycles_count":0},"next_cycle_at":"2000-01-01T00:00:00.000Z"}
 ```
 
 **`daemon/queue.json`**:
@@ -108,7 +108,7 @@ Copy the template as-is to `daemon/loop.md`. **No placeholder replacement needed
 
 **`daemon/outbox.json`**:
 ```json
-{"sent":[],"pending":[],"follow_ups":[],"next_id":1,"budget":{"cycle_limit_sats":200,"daily_limit_sats":200,"spent_today_sats":0,"last_reset":"1970-01-01T00:00:00.000Z"}}
+{"sent":[],"pending":[],"follow_ups":[],"next_id":1,"budget":{"cycle_limit_sats":200,"daily_limit_sats":200,"spent_today_sats":0,"last_reset":"2000-01-01T00:00:00.000Z"}}
 ```
 
 ### `memory/` directory
@@ -559,6 +559,14 @@ Detect the execution environment before entering the loop:
   → **Single-cycle mode**: Run ONE complete cycle through all phases, write health.json, then exit cleanly. Do not sleep or loop.
 - **Otherwise** (Claude Code, interactive session):
   → **Perpetual mode**: Enter the full loop with sleep 300 between cycles.
+
+### Placeholder Validation
+
+Before entering the loop, verify no unfilled placeholders remain:
+```bash
+grep -rn '{AGENT_\|{YOUR_\|\[YOUR_' CLAUDE.md daemon/loop.md 2>/dev/null
+```
+If any matches are found, print the matches and stop — tell the user which placeholders need filling. Do NOT enter the loop with unfilled placeholders.
 
 ### Loop Entry
 

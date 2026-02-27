@@ -123,7 +123,7 @@ Classify observations, plan actions. **Don't send replies yet.**
 
 ### Reply mechanics (used in Deliver)
 Max 500 chars total (signature string). Sign: `"Inbox Reply | {messageId} | {reply_text}"`.
-**Safe reply length** = 500 - 22 - len(messageId). Typical messageId ~60 chars → safe reply ~418 chars.
+**Safe reply length** = 500 - 17 - len(messageId). The fixed overhead is `"Inbox Reply | "` (14 chars) + `" | "` (3 chars) = 17. Typical messageId ~60 chars → safe reply ~423 chars.
 If reply_text exceeds safe length, truncate and append "...". Never send without checking.
 ```bash
 export MSG_ID="<id>" REPLY_TEXT="<text>"
@@ -233,7 +233,18 @@ Write on meaningful events OR every 5th cycle (periodic summary). Update learnin
 
 ## Phase 8: Evolve
 
-Edit THIS file with improvements. **Verify all 10 phase headers survive** (revert if any missing). Append to evolution-log.md.
+Edit THIS file with improvements. Before editing, create a backup:
+```bash
+cp daemon/loop.md daemon/loop.md.bak
+```
+After editing, **verify all 10 phase headers survive**:
+```bash
+for phase in "Phase 1:" "Phase 2:" "Phase 3:" "Phase 4:" "Phase 5:" "Phase 6:" "Phase 7:" "Phase 8:" "Phase 9:" "Phase 10:"; do
+  grep -q "$phase" daemon/loop.md || { echo "MISSING: $phase — restoring backup"; cp daemon/loop.md.bak daemon/loop.md; break; }
+done
+rm -f daemon/loop.md.bak
+```
+If any phase header is missing, restore from backup. Append to evolution-log.md.
 
 **CEO evolution rules:**
 - Never evolve during wartime. Execute the existing playbook.
