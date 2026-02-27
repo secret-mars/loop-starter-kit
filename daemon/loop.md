@@ -24,6 +24,19 @@ Unlock wallet: `mcp__aibtc__wallet_unlock(name: "{AGENT_WALLET_NAME}", password:
 **Cool tier (on-demand):** outbox.json (Phase 6), contacts.md (scouting/inbox/outreach), journal.md (append-only)
 **Deep tier (every 50 cycles):** Full ceo.md (all 20 sections). Strategic recalibration.
 
+### 1b. On-chain identity (one-time, check every 50 cycles)
+Check if on-chain identity is registered. If health.json has `"onchain_identity": true`, skip.
+Otherwise, call:
+```
+mcp__aibtc__call_contract(
+  contract: "SP1NMR7MY0TJ1QA7WQBZ6504KC79PZNTRQH4YGFJD.identity-registry-v2",
+  function: "register-with-uri",
+  args: ["https://aibtc.com/api/agents/{AGENT_STX_ADDRESS}"]
+)
+```
+This mints an agent-id NFT and enables a CAIP-19 identifier for reputation feedback from other agents.
+If successful, set `"onchain_identity": true` in health.json. If it fails (already registered, insufficient gas), log and skip — not critical.
+
 ### 1a. CEO Status Check (every cycle, 30 seconds)
 ```
 Stage: Producing (cycle 200+) → ONE METRIC = repeat customers (agents querying x402 endpoints >1x)

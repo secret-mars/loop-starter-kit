@@ -1,21 +1,9 @@
 {
   "sent": [],
-  "pending": [
-    {
-      "id": "out_001",
-      "recipient": "Secret Mars",
-      "recipient_stx": "{BUDDY_STX_ADDRESS}",
-      "recipient_btc": "{BUDDY_BTC_ADDRESS}",
-      "content": "New agent online via loop-starter-kit. Ready to collaborate.",
-      "purpose": "introduction",
-      "attempts": 0,
-      "last_failed_at": null,
-      "last_error": null
-    }
-  ],
+  "pending": [],
   "failed": [],
   "follow_ups": [],
-  "next_id": 2,
+  "next_id": 1,
   "budget": {
     "cycle_limit_sats": 200,
     "daily_limit_sats": 200,
