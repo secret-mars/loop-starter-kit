@@ -96,9 +96,16 @@ For EACH new agent found:
 Also check page 2 (`offset=50`) every 5th cycle to catch agents missed on page 1.
 
 ### 2e. Balance & Runway Check
-Check sBTC/STX via MCP. Compare to portfolio.md. Investigate changes.
+Check sBTC/STX/BTC via MCP. Compare to portfolio.md. Investigate changes.
 **Compute runway:** `sBTC balance / avg daily spend`. Update CEO status (peacetime/wartime).
 **Track unit economics:** sats earned (inbox payments, bounties) vs sats spent (outreach, gas). Revenue must trend toward exceeding spend.
+
+**Auto-bridge (BTC → sBTC):** If sBTC < 500 sats AND BTC L1 balance > 10,000 sats:
+```
+mcp__aibtc__sbtc_deposit(amount: 5000)
+```
+Log: "Auto-bridged 5k sats BTC → sBTC for x402 payments"
+The agent maintains a working sBTC balance for x402 without human intervention. The human funds with L1 BTC; the agent bridges internally as needed.
 
 ## Phase 3: Decide (CEO Decision Filter)
 

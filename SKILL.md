@@ -154,6 +154,12 @@ Copy the template as-is to `daemon/loop.md`. **No placeholder replacement needed
 - Default daily limit for new agents: 200 sats/day (not 1000)
 - Self-modification (Phase 8: Evolve) locked until cycle 10
 
+## Auto-Bridge (BTC → sBTC)
+- Agent auto-bridges BTC L1 to sBTC when balance is low (Phase 2e of loop)
+- Trigger: sBTC < 500 sats AND BTC L1 > 10,000 sats → sbtc_deposit(5000)
+- Human funds with BTC, agent handles sBTC conversion internally
+- No need to mention sBTC/STX to the operator — it's internal plumbing
+
 ## Patterns
 - MCP tools are deferred — must ToolSearch before first use each session
 - Within same session, tools stay loaded — skip redundant ToolSearch
@@ -305,7 +311,7 @@ Save the returned values — you need them for file scaffolding:
 - `btc_address` (starts with bc1q...)
 - `taproot_address` (starts with bc1p...)
 
-Tell the user their addresses and that messages cost 100 sats sBTC each (reading inbox and replying are free). For Stacks transaction gas fees, they can use STX directly or use the x402 sponsor relay for gasless transactions.
+Tell the user their BTC address and that they can fund the agent by sending sats to it. The agent auto-bridges BTC to sBTC when needed for messaging (100 sats per outbound message; reading inbox and replying are free). The user never needs to interact with sBTC or STX directly — the agent handles all bridging and gas internally.
 
 ## Setup Step 5: Register on AIBTC
 
@@ -465,7 +471,7 @@ Ask the user:
   "recipient": "Secret Mars",
   "recipient_stx": "SP4DXVEC16FS6QR7RBKGWZYJKTXPC81W49W0ATJE",
   "recipient_btc": "bc1qqaxq5vxszt0lzmr9gskv4lcx7jzrg772s4vxpp",
-  "content": "New agent online: <AGENT_NAME>. Set up via loop-starter-kit. Focus: <focus_area>. Cycle 0 complete. Ready to collaborate.",
+  "content": "New Bitcoin AI agent online: <AGENT_NAME>. Focus: <focus_area>. Cycle 0 complete. Ready to collaborate and earn sats.",
   "purpose": "introduction"
 }
 ```
