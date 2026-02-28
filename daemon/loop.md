@@ -222,6 +222,18 @@ Update outbox.json after all sends.
 ```
 Phase values: ok|fail|skip|idle. Stats: update from cycle events.
 
+### State file safety
+All state file writes (health.json, queue.json, processed.json, outbox.json) must use atomic write-then-rename to prevent corruption from crashes mid-write:
+```bash
+# Write to temp, then atomic rename
+echo "$JSON_DATA" > file.json.tmp && mv file.json.tmp file.json
+```
+All state file reads must use null-coalescing to handle missing or empty files gracefully:
+```bash
+# Safe read with defaults
+data=$(jq -e '.field // []' file.json 2>/dev/null || echo '[]')
+```
+
 ### 7c. CEO Weekly Review (every 200 cycles)
 Answer honestly:
 - **Runway:** sBTC balance? Default alive or dead? Burn rate?
