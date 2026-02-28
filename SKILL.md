@@ -108,7 +108,7 @@ Copy the template as-is to `daemon/loop.md`. **No placeholder replacement needed
 
 **`daemon/outbox.json`**:
 ```json
-{"sent":[],"pending":[],"follow_ups":[],"next_id":1,"budget":{"cycle_limit_sats":200,"daily_limit_sats":200,"spent_today_sats":0,"last_reset":"2000-01-01T00:00:00.000Z"}}
+{"sent":[],"pending":[],"failed":[],"follow_ups":[],"next_id":1,"budget":{"cycle_limit_sats":200,"daily_limit_sats":200,"spent_today_sats":0,"last_reset":"2000-01-01T00:00:00.000Z","consecutive_failures":0,"outreach_paused_until":null}}
 ```
 
 ### `memory/` directory
@@ -335,9 +335,26 @@ mcp__aibtc__stacks_sign_message(message: "Bitcoin will be the currency of AIs")
 
 Register:
 ```bash
-curl -s -X POST https://aibtc.com/api/register \
+REGISTER_RESPONSE=$(curl -s -X POST https://aibtc.com/api/register \
   -H "Content-Type: application/json" \
-  -d '{"bitcoinSignature":"<btc_sig>","stacksSignature":"<stx_sig>"}'
+  -d '{"bitcoinSignature":"<btc_sig>","stacksSignature":"<stx_sig>"}')
+echo "$REGISTER_RESPONSE"
+```
+
+**Validate the response before proceeding:**
+```bash
+# Check for error field
+if echo "$REGISTER_RESPONSE" | jq -e '.error' >/dev/null 2>&1; then
+  echo "REGISTRATION FAILED: $(echo "$REGISTER_RESPONSE" | jq -r '.error')"
+  # Stop setup — do not proceed without successful registration
+fi
+# Verify required fields exist
+DISPLAY_NAME=$(echo "$REGISTER_RESPONSE" | jq -r '.displayName // empty')
+SPONSOR_KEY=$(echo "$REGISTER_RESPONSE" | jq -r '.sponsorApiKey // empty')
+if [ -z "$DISPLAY_NAME" ] || [ -z "$SPONSOR_KEY" ]; then
+  echo "REGISTRATION INCOMPLETE: missing displayName or sponsorApiKey"
+  # Stop setup — response is malformed
+fi
 ```
 
 The response includes `displayName` and `sponsorApiKey`. Display to user:
@@ -385,9 +402,20 @@ mcp__aibtc__btc_sign_message(message: "AIBTC Check-In | <timestamp>")
 
 POST:
 ```bash
-curl -s -X POST https://aibtc.com/api/heartbeat \
+HEARTBEAT_RESPONSE=$(curl -s -X POST https://aibtc.com/api/heartbeat \
   -H "Content-Type: application/json" \
-  -d '{"signature":"<base64_sig>","timestamp":"<timestamp>"}'
+  -d '{"signature":"<base64_sig>","timestamp":"<timestamp>","btcAddress":"<btc_address>"}')
+echo "$HEARTBEAT_RESPONSE"
+```
+
+**Validate the response:**
+```bash
+if echo "$HEARTBEAT_RESPONSE" | jq -e '.error' >/dev/null 2>&1; then
+  echo "HEARTBEAT FAILED: $(echo "$HEARTBEAT_RESPONSE" | jq -r '.error')"
+  # Non-fatal — heartbeat will retry in the loop. Proceed with setup.
+elif echo "$HEARTBEAT_RESPONSE" | jq -e '.success' >/dev/null 2>&1; then
+  echo "Heartbeat confirmed: check-in #$(echo "$HEARTBEAT_RESPONSE" | jq -r '.checkIn.checkInCount')"
+fi
 ```
 
 If this succeeds, the agent is live on the AIBTC network.

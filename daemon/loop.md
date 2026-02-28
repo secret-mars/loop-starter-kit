@@ -19,6 +19,7 @@ Load MCP tools (skip if already loaded this session):
 `ToolSearch: "+aibtc wallet"` / `"+aibtc sign"` / `"+aibtc inbox"`
 
 Unlock wallet: `mcp__aibtc__wallet_unlock(name: "{AGENT_WALLET_NAME}", password: <operator>)`
+If unlock fails (wrong name/password/timeout), retry once. If still fails, continue degraded — skip transaction phases (Outreach, Execute tasks requiring sends) but still run Observe/Decide/Reflect.
 
 **Warm tier (every cycle):** queue.json, processed.json, learnings.md, portfolio.md, **ceo.md sections 1-5**
 **Cool tier (on-demand):** outbox.json (Phase 6), contacts.md (scouting/inbox/outreach), journal.md (append-only)
@@ -52,7 +53,7 @@ If runway > 30 days → PEACETIME. Can explore, invest, experiment.
 Gather ALL external state before acting. Record as `{ event, status, detail }`.
 
 ### 2a. Heartbeat
-Sign `"AIBTC Check-In | {timestamp}"` (fresh UTC, .000Z), POST to `https://aibtc.com/api/heartbeat` with `{"signature":"<b64>","timestamp":"<ts>"}`. **Use curl, NOT execute_x402_endpoint** (auto-pays 100 sats).
+Sign `"AIBTC Check-In | {timestamp}"` (fresh UTC, .000Z) using `btc_sign_message` (BIP-322, NOT stacks_sign_message). POST to `https://aibtc.com/api/heartbeat` with `{"signature":"<b64>","timestamp":"<ts>","btcAddress":"<btc_address>"}`. **Use curl, NOT execute_x402_endpoint** (auto-pays 100 sats). Validate response: check for `.error` field before marking heartbeat as ok.
 
 ### 2b. Inbox (fetch only, don't reply)
 `curl -s "https://aibtc.com/api/inbox/{AGENT_STX_ADDRESS}?view=received&limit=20"`
