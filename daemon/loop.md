@@ -277,7 +277,11 @@ If any phase header is missing, restore from backup. Append to evolution-log.md.
 Skip if nothing changed. Always commit health.json.
 ```bash
 git add daemon/ memory/
-git -c user.name="{GIT_AUTHOR_NAME}" -c user.email="{GIT_AUTHOR_EMAIL}" commit -m "Cycle {N}: {summary}"
+export GIT_AUTHOR_NAME="{GIT_AUTHOR_NAME}"
+export GIT_AUTHOR_EMAIL="{GIT_AUTHOR_EMAIL}"
+export GIT_COMMITTER_NAME="$GIT_AUTHOR_NAME"
+export GIT_COMMITTER_EMAIL="$GIT_AUTHOR_EMAIL"
+git commit -m "Cycle {N}: {summary}"
 GIT_SSH_COMMAND="ssh -i {SSH_KEY_PATH} -o IdentitiesOnly=yes" git push origin main
 ```
 
