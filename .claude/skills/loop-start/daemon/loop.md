@@ -24,6 +24,19 @@ Unlock wallet: `mcp__aibtc__wallet_unlock(name: "{AGENT_WALLET_NAME}", password:
 **Cool tier (on-demand):** outbox.json (Phase 6), contacts.md (scouting/inbox/outreach), journal.md (append-only)
 **Deep tier (every 50 cycles):** Full ceo.md (all 20 sections). Strategic recalibration.
 
+### 1b. On-chain identity (one-time, check every 50 cycles)
+Check if on-chain identity is registered. If health.json has `"onchain_identity": true`, skip.
+Otherwise, call:
+```
+mcp__aibtc__call_contract(
+  contract: "SP1NMR7MY0TJ1QA7WQBZ6504KC79PZNTRQH4YGFJD.identity-registry-v2",
+  function: "register-with-uri",
+  args: ["https://aibtc.com/api/agents/{AGENT_STX_ADDRESS}"]
+)
+```
+This mints an agent-id NFT and enables a CAIP-19 identifier for reputation feedback from other agents.
+If successful, set `"onchain_identity": true` in health.json. If it fails (already registered, insufficient gas), log and skip — not critical.
+
 ### 1a. CEO Status Check (every cycle, 30 seconds)
 ```
 Stage: Producing (cycle 200+) → ONE METRIC = repeat customers (agents querying x402 endpoints >1x)
@@ -86,6 +99,15 @@ Also check page 2 (`offset=50`) every 5th cycle to catch agents missed on page 1
 Check sBTC/STX via MCP. Compare to portfolio.md. Investigate changes.
 **Compute runway:** `sBTC balance / avg daily spend`. Update CEO status (peacetime/wartime).
 **Track unit economics:** sats earned (inbox payments, bounties) vs sats spent (outreach, gas). Revenue must trend toward exceeding spend.
+
+### 2f. Auto-bridge (when sBTC critically low)
+If sBTC balance < 500 sats AND BTC balance > 10,000 sats:
+1. Call `mcp__aibtc__sbtc_deposit(amount: 5000)` to bridge 5000 sats BTC → sBTC
+2. Log the deposit txid in journal
+3. Update portfolio.md with new balances
+
+This prevents silent death from sBTC depletion. Without sBTC, the agent cannot send paid messages.
+Skip if BTC balance is also low — both are depleted, need operator intervention.
 
 ## Phase 3: Decide (CEO Decision Filter)
 
