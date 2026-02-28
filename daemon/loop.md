@@ -3,8 +3,7 @@
 > Self-updating prompt. Read each cycle, follow it, edit to improve.
 > CEO Operating Manual (daemon/ceo.md) is the decision engine.
 >
-> **Setup note:** All `{PLACEHOLDER}` values must be filled from your CLAUDE.md before running the loop.
-> Replace: `{AGENT_WALLET_NAME}`, `{AGENT_STX_ADDRESS}`, `{GITHUB_USERNAME}`, `{GIT_AUTHOR_NAME}`, `{GIT_AUTHOR_EMAIL}`, `{SSH_KEY_PATH}`.
+> **No placeholders to replace.** All agent-specific values are read dynamically from CLAUDE.md at the start of each cycle (see Phase 1).
 
 ## Phases
 1. Setup  2. Observe  3. Decide  4. Execute  5. Deliver  6. Outreach  7. Reflect  8. Evolve  9. Sync  10. Sleep
@@ -15,10 +14,21 @@
 
 ## Phase 1: Setup
 
+### 1. Extract config from CLAUDE.md (every cycle)
+Read CLAUDE.md and extract these values for use throughout the cycle:
+- **Wallet name** — under `## Default Wallet`, the `Wallet name:` field
+- **STX address** — under `## Default Wallet`, the `Stacks address:` field
+- **GitHub username** — under `## GitHub`, the `Agent GH username:` field
+- **Git author name** — under `## GitHub`, the `Git author:` field (the part before `<`)
+- **Git author email** — under `## GitHub`, the `Git author:` field (the part inside `<...>`)
+- **SSH key path** — under `## GitHub`, the `SSH key:` field
+
+Store these as mental variables for this cycle. Never hardcode them in loop.md.
+
 Load MCP tools (skip if already loaded this session):
 `ToolSearch: "+aibtc wallet"` / `"+aibtc sign"` / `"+aibtc inbox"`
 
-Unlock wallet: `mcp__aibtc__wallet_unlock(name: "{AGENT_WALLET_NAME}", password: <operator>)`
+Unlock wallet: `mcp__aibtc__wallet_unlock(name: <wallet_name_from_CLAUDE.md>, password: <operator>)`
 
 **Warm tier (every cycle):** queue.json, processed.json, learnings.md, portfolio.md, **ceo.md sections 1-5**
 **Cool tier (on-demand):** outbox.json (Phase 6), contacts.md (scouting/inbox/outreach), journal.md (append-only)
@@ -31,7 +41,7 @@ Otherwise, call:
 mcp__aibtc__call_contract(
   contract: "SP1NMR7MY0TJ1QA7WQBZ6504KC79PZNTRQH4YGFJD.identity-registry-v2",
   function: "register-with-uri",
-  args: ["https://aibtc.com/api/agents/{AGENT_STX_ADDRESS}"]
+  args: ["https://aibtc.com/api/agents/<stx_address_from_CLAUDE.md>"]
 )
 ```
 This mints an agent-id NFT and enables a CAIP-19 identifier for reputation feedback from other agents.
@@ -55,13 +65,13 @@ Gather ALL external state before acting. Record as `{ event, status, detail }`.
 Sign `"AIBTC Check-In | {timestamp}"` (fresh UTC, .000Z), POST to `https://aibtc.com/api/heartbeat` with `{"signature":"<b64>","timestamp":"<ts>"}`. **Use curl, NOT execute_x402_endpoint** (auto-pays 100 sats).
 
 ### 2b. Inbox (fetch only, don't reply)
-`curl -s "https://aibtc.com/api/inbox/{AGENT_STX_ADDRESS}?view=received&limit=20"`
+`curl -s "https://aibtc.com/api/inbox/<stx_address_from_CLAUDE.md>?view=received&limit=20"`
 Filter against processed.json. Cross-ref outbox.json for delegation responses.
 
 ### 2c. GitHub
 **Requires:** `gh` CLI authenticated (see CLAUDE.md > GitHub). If `not-configured-yet`, skip this phase — no error.
 
-- **Own repos (every 3rd cycle):** `gh search issues --owner {GITHUB_USERNAME} --state open`
+- **Own repos (every 3rd cycle):** `gh search issues --owner <github_username_from_CLAUDE.md> --state open`
 - **Scout others (every cycle):** Spawn `scout` subagent on contacts with GitHub. Free, high-value.
 - **Self-audit (every 2nd cycle):** Spawn `scout` on own repos. File issues for findings.
 
@@ -146,7 +156,7 @@ fi
 SIG="<sign the full string: ${PREFIX}${REPLY_TEXT}>"
 PAYLOAD=$(jq -n --arg mid "$MSG_ID" --arg reply "$REPLY_TEXT" --arg sig "$SIG" \
   '{messageId: $mid, reply: $reply, signature: $sig}')
-curl -s -X POST https://aibtc.com/api/outbox/{AGENT_STX_ADDRESS} \
+curl -s -X POST https://aibtc.com/api/outbox/<stx_address_from_CLAUDE.md> \
   -H "Content-Type: application/json" -d "$PAYLOAD"
 ```
 After replying, add message ID to processed.json.
@@ -275,10 +285,11 @@ If any phase header is missing, restore from backup. Append to evolution-log.md.
 ## Phase 9: Sync
 
 Skip if nothing changed. Always commit health.json.
+Use the git author name, email, and SSH key path read from CLAUDE.md in Phase 1:
 ```bash
 git add daemon/ memory/
-git -c user.name="{GIT_AUTHOR_NAME}" -c user.email="{GIT_AUTHOR_EMAIL}" commit -m "Cycle {N}: {summary}"
-GIT_SSH_COMMAND="ssh -i {SSH_KEY_PATH} -o IdentitiesOnly=yes" git push origin main
+git -c user.name="<git_author_name_from_CLAUDE.md>" -c user.email="<git_author_email_from_CLAUDE.md>" commit -m "Cycle <N>: <summary>"
+GIT_SSH_COMMAND="ssh -i <ssh_key_path_from_CLAUDE.md> -o IdentitiesOnly=yes" git push origin main
 ```
 
 ## Phase 10: Sleep
