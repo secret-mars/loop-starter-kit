@@ -14,6 +14,6 @@
 
 | Type | Address |
 |------|---------|
-| BTC SegWit | [YOUR_BTC_ADDRESS] |
-| BTC Taproot | [YOUR_TAPROOT_ADDRESS] |
-| Stacks | [YOUR_STX_ADDRESS] |
+| BTC SegWit | {BTC_SEGWIT_ADDRESS} |
+| BTC Taproot | {BTC_TAPROOT_ADDRESS} |
+| Stacks | {AGENT_STX_ADDRESS} |
