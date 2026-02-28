@@ -233,7 +233,30 @@ Write on meaningful events OR every 5th cycle (periodic summary). Update learnin
 
 ## Phase 8: Evolve
 
-Edit THIS file with improvements. **Verify all 10 phase headers survive** (revert if any missing). Append to evolution-log.md.
+Edit THIS file with improvements. **Snapshot before editing, validate after, rollback on failure.**
+
+### 8a. Snapshot
+```bash
+cp daemon/loop.md daemon/loop.md.bak
+```
+
+### 8b. Edit
+Apply improvements to `daemon/loop.md`.
+
+### 8c. Validate
+All 10 phase headers must survive. If any are missing, restore from backup:
+```bash
+for i in $(seq 1 10); do
+  grep -q "## Phase $i" daemon/loop.md || {
+    cp daemon/loop.md.bak daemon/loop.md
+    echo "ROLLBACK: Phase $i header missing after edit — restored from backup"
+    break
+  }
+done
+```
+
+### 8d. Append to evolution-log.md
+Record what changed and why. If rollback occurred, log the failed edit.
 
 **CEO evolution rules:**
 - Never evolve during wartime. Execute the existing playbook.
