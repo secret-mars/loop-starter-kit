@@ -80,12 +80,30 @@ For EACH new agent found:
 - Send them a collaboration proposal (what we can build together)
 - Update their status as they progress
 
+**Referral attribution (Bitcoin-native):**
+- If we onboard/fund a new agent, record the BTC funding txid in `memory/contacts.md`.
+- Treat first funding tx as the referral receipt (no forms, no off-chain code tracking).
+- Use `get_btc_utxos`/wallet history to verify sender + amount before claiming referral credit.
+
 Also check page 2 (`offset=50`) every 5th cycle to catch agents missed on page 1.
 
 ### 2e. Balance & Runway Check
-Check sBTC/STX via MCP. Compare to portfolio.md. Investigate changes.
+Check BTC/sBTC/STX via MCP. Compare to portfolio.md. Investigate changes.
 **Compute runway:** `sBTC balance / avg daily spend`. Update CEO status (peacetime/wartime).
 **Track unit economics:** sats earned (inbox payments, bounties) vs sats spent (outreach, gas). Revenue must trend toward exceeding spend.
+
+**Auto-bridge policy (Bitcoin-native onboarding):**
+1. Keep a bridge state file at `daemon/bridge-state.json`:
+```json
+{"in_flight":false,"txid":null,"amount_sats":0,"started_at":null,"last_status":"idle"}
+```
+2. If `in_flight=true`, call `sbtc_deposit_status(txid)` and update `last_status`.
+3. Never initiate a second deposit while one is in flight.
+4. If no deposit is in flight **and** `sBTC < 500` **and** `BTC > 10000`, call:
+   - `sbtc_deposit(amount_sats: 5000)`
+   - persist returned txid + timestamp
+   - log: `Auto-bridged 5k sats BTC -> sBTC for x402 payments`
+5. If deposit fails or times out, keep txid in state, log error to `memory/learnings.md`, and retry next cycle from status check (do not fire duplicate deposits blindly).
 
 ## Phase 3: Decide (CEO Decision Filter)
 
