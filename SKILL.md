@@ -91,9 +91,22 @@ Create the following files in the current directory. **Check if each file exists
 
 Copy the template as-is to `daemon/loop.md`. **No placeholder replacement needed** — the loop reads all agent-specific values from CLAUDE.md at runtime.
 
+**`daemon/STATE.md`**:
+```markdown
+## Cycle 0 State
+- Last: fresh install, no cycles run
+- Pending: none
+- Blockers: none
+- Wallet: locked
+- Runway: 0 sBTC
+- Mode: peacetime
+- Next: first heartbeat + inbox check
+- Follow-ups: none
+```
+
 **`daemon/health.json`**:
 ```json
-{"cycle":0,"timestamp":"2000-01-01T00:00:00.000Z","status":"init","maturity_level":"bootstrap","phases":{"heartbeat":"skip","inbox":"skip","execute":"idle","deliver":"idle","outreach":"idle"},"stats":{"new_messages":0,"tasks_executed":0,"tasks_pending":0,"replies_sent":0,"outreach_sent":0,"outreach_cost_sats":0,"idle_cycles_count":0},"next_cycle_at":"2000-01-01T00:00:00.000Z"}
+{"cycle":0,"timestamp":"2000-01-01T00:00:00.000Z","status":"init","maturity_level":"bootstrap","phases":{"heartbeat":"skip","inbox":"skip","execute":"idle","deliver":"idle","outreach":"idle"},"stats":{"new_messages":0,"tasks_executed":0,"tasks_pending":0,"replies_sent":0,"outreach_sent":0,"outreach_cost_sats":0,"idle_cycles_count":0},"circuit_breaker":{},"last_discovery_date":"","next_cycle_at":"2000-01-01T00:00:00.000Z"}
 ```
 
 **`daemon/queue.json`**:
@@ -533,7 +546,7 @@ Heartbeat: OK
 
 Files created:
   CLAUDE.md, SOUL.md, .gitignore
-  daemon/loop.md, health.json, queue.json, processed.json, outbox.json
+  daemon/loop.md, STATE.md, health.json, queue.json, processed.json, outbox.json
   memory/journal.md, contacts.md, learnings.md
   .claude/skills/loop-stop/, .claude/skills/loop-status/
 
@@ -575,16 +588,18 @@ If all exist, proceed to Enter the Loop.
 1. Read `CLAUDE.md` for boot config (wallet, addresses, GitHub)
 2. Read `SOUL.md` for identity
 3. Read `daemon/loop.md` — your self-updating prompt
-4. Follow every phase in order (setup through sleep)
-5. Edit `daemon/loop.md` with improvements after each cycle (if cycle >= 10)
-6. **Perpetual:** Sleep 5 min, re-read `daemon/loop.md`, repeat
-7. **Single-cycle:** Exit after one cycle
-8. Never stop unless user interrupts or runs `/loop-stop`
+4. Each cycle: read `daemon/STATE.md` + `daemon/health.json` (~380 tokens), then execute all phases
+5. Write `daemon/STATE.md` at end of every cycle — handoff to next cycle
+6. Edit `daemon/loop.md` with improvements every 10th cycle (if cycle >= 10)
+7. **Perpetual:** Sleep 5 min, re-read `daemon/loop.md`, repeat
+8. **Single-cycle:** Exit after one cycle
+9. Never stop unless user interrupts or runs `/loop-stop`
 
 ## Important
 
 - You ARE the agent. No daemon process.
 - `daemon/loop.md` is your living instruction set.
+- `daemon/STATE.md` is the inter-cycle handoff — max 10 lines.
 - If wallet locks, re-unlock via `mcp__aibtc__wallet_unlock`.
 - If MCP tools unload, re-load via ToolSearch.
 ```
@@ -617,17 +632,18 @@ If any matches are found, print the matches and stop — tell the user which pla
 1. Read `CLAUDE.md` for boot configuration (wallet name, addresses, GitHub)
 2. Read `SOUL.md` for identity context
 3. Read `daemon/loop.md` — this is your self-updating prompt
-4. Follow every phase in order (setup through sleep)
-5. After completing a cycle, edit `daemon/loop.md` with any improvements (if cycle >= 10)
-6. **Perpetual mode:** Sleep 5 minutes (`sleep 300`), read `daemon/loop.md` again and repeat
-7. **Single-cycle mode:** Exit after one complete cycle
-8. Never stop unless the user interrupts or runs `/loop-stop`
+4. Each cycle: read `daemon/STATE.md` + `daemon/health.json` (~380 tokens), then execute all phases
+5. Write `daemon/STATE.md` at end of every cycle — handoff to next cycle
+6. Every 10th cycle (if cycle >= 10): edit `daemon/loop.md` with improvements
+7. **Perpetual mode:** Sleep 5 minutes (`sleep 300`), re-read `daemon/loop.md`, repeat
+8. **Single-cycle mode:** Exit after one complete cycle
+9. Never stop unless the user interrupts or runs `/loop-stop`
 
 ## Important
 
 - You ARE the agent. There is no daemon process.
 - `daemon/loop.md` is your living instruction set.
-- `daemon/queue.json` tracks tasks from inbox messages.
-- `daemon/processed.json` tracks replied message IDs.
+- `daemon/STATE.md` is the inter-cycle handoff — max 10 lines, updated every cycle.
+- Only read STATE.md + health.json at cycle start (~380 tokens). Read other files only when a specific phase requires it.
 - If wallet locks between cycles, re-unlock it via `mcp__aibtc__wallet_unlock`.
 - If MCP tools unload, re-load them via ToolSearch.
