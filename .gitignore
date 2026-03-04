@@ -9,6 +9,7 @@
 !.claude/agents/**
 node_modules/
 daemon/processed.json
+daemon/loop.md.bak
 *.key
 *.pem
 .DS_Store

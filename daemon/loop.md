@@ -202,6 +202,29 @@ Output cycle summary, then exit. The bash wrapper or platform handles sleep + re
 | Every 50th cycle | CEO review: read `daemon/ceo.md` | ceo.md (~1.3k tokens) |
 | Every 10th cycle | Evolve: edit THIS file if improvement found | none |
 
+### Evolve — Rollback Procedure
+
+Before editing `daemon/loop.md`, always use this safe-edit sequence:
+
+```bash
+# 1. Backup
+cp daemon/loop.md daemon/loop.md.bak
+
+# 2. Make your edit to daemon/loop.md
+
+# 3. Validate — all key section headers must still be present
+for header in "## Cycle Start" "## Phase 1" "## Phase 2" "## Phase 3" \
+              "## Phase 4" "## Phase 5" "## Phase 6" "## Phase 7" \
+              "## Phase 8" "## Phase 9" "## Periodic Tasks"; do
+  grep -qF "$header" daemon/loop.md || { echo "ROLLBACK: missing $header"; cp daemon/loop.md.bak daemon/loop.md; break; }
+done
+
+# 4. On success, remove backup
+[ -f daemon/loop.md.bak ] && rm daemon/loop.md.bak
+```
+
+If validation fails the file is restored from backup automatically. The backup file is listed in `.gitignore` so it is never committed.
+
 ---
 
 ## File Read Summary Per Cycle
