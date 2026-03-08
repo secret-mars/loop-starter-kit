@@ -254,6 +254,115 @@ Any phase fails → log it, increment circuit breaker, continue to next phase.
 
 ---
 
+## Stxer Integration (optional — recommended for DeFi agents)
+
+Stxer (api.stxer.xyz) provides batch reads, transaction simulation, and execution tracing for Stacks. Use it to prevent wasted gas and debug failed txs.
+
+### Batch State Reads (1 API call for all balances)
+
+Replace multiple MCP calls with a single batch read:
+```bash
+curl -s -X POST "https://api.stxer.xyz/sidecar/v2/batch" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "stx": ["<YOUR_STX_ADDRESS>"],
+    "nonces": ["<YOUR_STX_ADDRESS>"],
+    "ft_balance": [
+      ["SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token", "sbtc-token", "<YOUR_STX_ADDRESS>"]
+    ]
+  }'
+```
+- `stx` → hex STX balance (parseInt(hex, 16) = uSTX, divide by 1e6 for STX)
+- `ft_balance` → decimal token balance (sBTC in sats)
+- `nonces` → current nonce (decimal string)
+- Add `readonly` for read-only contract calls (args must be Clarity-serialized hex)
+- Add `tip` field with `index_block_hash` to query historical state (time-travel)
+
+### Pre-Broadcast Simulation (MANDATORY before contract calls)
+
+Dry-run any contract call before spending gas:
+```bash
+# 1. Create session
+SIM_ID=$(curl -s -X POST "https://api.stxer.xyz/devtools/v2/simulations" \
+  -H "Content-Type: application/json" -d '{"skip_tracing":true}' \
+  | python3 -c "import sys,json;print(json.load(sys.stdin)['id'])")
+
+# 2. Simulate (Eval = [sender, sponsor, contract_id, clarity_code])
+RESULT=$(curl -s -X POST "https://api.stxer.xyz/devtools/v2/simulations/$SIM_ID" \
+  -H "Content-Type: application/json" -H "Accept: application/json" \
+  -d '{"steps":[{"Eval":["<YOUR_STX>","","<CONTRACT>","(<function> <args>)"]}]}')
+
+# 3. Check: "Ok" = safe to broadcast, "Err" = DO NOT broadcast
+echo "$RESULT" | python3 -c "import sys,json; r=json.load(sys.stdin)['steps'][0]['Eval']; print('SAFE' if 'Ok' in r else f'BLOCKED: {r[\"Err\"]}')"
+```
+**Rules:**
+- Simulation returns `Err` → do NOT broadcast. Log error, skip operation.
+- Simulation returns `Ok` → proceed with MCP broadcast, then verify with `get_transaction_status`.
+- For read-only checks (balances, rewards) use `/sidecar/v2/batch` instead (no session needed).
+
+### Tx Debugging (post-mortem)
+
+When a tx aborts on-chain, get the full Clarity execution trace:
+```bash
+# Get block info
+curl -sL "https://api.hiro.so/extended/v1/tx/0x<txid>" | jq '{block_height, block_hash}'
+# Get trace (zstd-compressed binary — pipe through zstd -d)
+curl -s "https://api.stxer.xyz/inspect/<block_height>/<block_hash>/<txid>" \
+  | zstd -d 2>/dev/null | grep -aoP '[A-Za-z][A-Za-z0-9_.:() \-]{8,}'
+```
+Shows every function call, assert, and contract-call in the execution — pinpoints exactly where and why a tx failed.
+
+### Available Step Types (simulation)
+
+| Step | Format | Use |
+|------|--------|-----|
+| `Eval` | `["sender", "", "contract", "(code)"]` | Execute Clarity with write access |
+| `Transaction` | `"hex-encoded-tx"` | Simulate a full signed/unsigned tx |
+| `Reads` | `[{"StxBalance":"addr"}, {"FtBalance":["contract","token","addr"]}, {"DataVar":["contract","var"]}]` | Read state mid-simulation |
+| `SetContractCode` | `["contract_id", "source", "clarity_version"]` | Replace contract code in sim |
+| `TenureExtend` | `[]` | Reset tenure costs |
+
+npm package: `stxer` (SimulationBuilder API). Docs: `https://api.stxer.xyz/docs`.
+
+---
+
+## Yield Farming with Zest Protocol (optional — for agents with sBTC)
+
+Supply sBTC to Zest Protocol lending pool to earn yield from borrowers + wSTX incentive rewards.
+
+### Setup
+- **Tools:** `zest_supply`, `zest_withdraw`, `zest_claim_rewards`, `zest_list_assets`
+- **Supply-only.** Do NOT borrow without operator approval (interest + liquidation risk).
+- Gas is negligible (~50k uSTX per tx). Pyth oracle fee ~2 uSTX.
+
+### Capital Allocation (adjust to your balance)
+- **Yield stack (Zest):** Majority of sBTC → lending pool for yield
+- **Liquid reserve:** Keep enough sBTC for operations (messages, inscriptions, trades)
+- **Revenue funnel:** Any earned sBTC → supply to Zest immediately
+
+### Yield Cycle (when bitcoin/yield pillar is active)
+1. **Check position** via stxer batch read (add `readonly` for `zsbtc-v2-0.get-balance`)
+2. **Check rewards** via stxer batch read (add `readonly` for `incentives-v2-2.get-vault-rewards`)
+   - Clarity-serialized args needed — see learnings for hex values
+   - Result > 0 → safe to claim. Result = 0 → skip (prevents `ERR_NO_REWARDS` abort).
+3. **Pre-simulate** claim/supply/withdraw via stxer before broadcasting
+4. **Broadcast** via MCP tool, then verify with `get_transaction_status`
+5. **ALWAYS verify tx status** — MCP returns success on broadcast, NOT on-chain confirmation
+
+### Key Contracts
+- **sBTC:** `SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token`
+- **Zest LP token:** `SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.zsbtc-v2-0`
+- **Borrow helper:** `SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.borrow-helper-v2-1-7`
+- **Incentives:** `SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.incentives-v2-2`
+- **wSTX reward:** `SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.wstx`
+
+### Pitfalls
+- `zest_claim_rewards` broadcasts even when rewards = 0 → tx aborts on-chain with `ERR_NO_REWARDS (err u1000000000003)`. **Always pre-check via get-vault-rewards read-only.**
+- `zest_get_position` MCP tool may be bugged (issue #278). Use `zsbtc-v2-0.get-balance` read-only instead.
+- MCP tools report `"success": true` on broadcast, NOT confirmation. Tx can abort on-chain. **Always verify with `get_transaction_status`.**
+
+---
+
 ## Reply Mechanics
 
 - Max 500 chars total signature string. Safe reply = 500 - 16 - len(messageId) chars.
@@ -276,3 +385,4 @@ Any phase fails → log it, increment circuit breaker, continue to next phase.
 ## Evolution Log
 - v4 → v5 (cycle 440): Integrated CEO Operating Manual. Added decision filter, weekly review, CEO evolution rules.
 - v5 → v6: Fresh context per cycle via STATE.md handoff. 9 phases (evolve is periodic). Minimal file reads (~380 tokens idle, ~1500 busy). Inbox API switched to ?status=unread. Circuit breaker pattern. Modulo-based periodic task rotation.
+- v6 → v7: Added stxer integration (batch reads, pre-broadcast simulation, tx debugging). Added Zest Protocol yield farming module. Pre-broadcast guard is now mandatory for contract calls.
