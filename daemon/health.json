@@ -21,5 +21,7 @@
   },
   "circuit_breaker": {},
   "last_discovery_date": "",
+  "last_zest_supply_at": "",
+  "zest_reserve_sats": 200000,
   "next_cycle_at": "2000-01-01T00:00:00.000Z"
 }

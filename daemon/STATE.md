@@ -4,6 +4,8 @@
 - Blockers: none
 - Wallet: locked
 - Runway: 0 sBTC
+- Zest position: 0 zsbtc
+- Reserve: 200000 sats liquid
 - Mode: peacetime
 - Next: first heartbeat + inbox check
 - Follow-ups: none

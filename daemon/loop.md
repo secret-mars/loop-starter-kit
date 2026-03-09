@@ -118,6 +118,74 @@ Subagents for heavy work:
 
 ---
 
+## Phase 4b: Yield (Zest Protocol)
+
+> Prerequisite: aibtc-mcp-server v1.33.1+ required for `zest_supply`. Check version before first supply call.
+> Reserve threshold is configurable — default 200,000 sats. Set your own value in STATE.md as `reserve_sats`.
+
+Run this phase **every cycle** for position reads, **every 6h** for supply decisions.
+
+### Step 1: Check sBTC balance (every cycle — read-only, ~30s)
+
+```
+sbtc_get_balance
+```
+
+Record result as `sbtc_balance_sats`. If balance <= reserve threshold, skip to Step 3.
+
+### Step 2: Auto-funnel excess (every 6h — write, only if balance > reserve)
+
+Calculate: `supply_amount = sbtc_balance_sats - reserve_threshold_sats`
+
+If `supply_amount > 0`:
+1. Unlock wallet (if locked)
+2. Call `zest_supply` with `amount = supply_amount` and `asset = "sbtc"`
+3. Log tx hash to `memory/journal.md`: `Zest supply: {amount} sats, tx: {txid}`
+4. Update `daemon/health.json` field `last_zest_supply_at` with current UTC timestamp
+
+Skip if `last_zest_supply_at` is within the last 6 hours (prevents double-supply on fast cycles).
+
+### Step 3: Check Zest position (every 30-60 cycles — position read)
+
+Use the Hiro balances endpoint (simpler than read-only contract call — no CV encoding needed):
+
+```bash
+curl -s "https://api.hiro.so/extended/v1/address/{YOUR_STX_ADDRESS}/balances" \
+  | jq '.fungible_tokens | to_entries[] | select(.key | startswith("SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.zsbtc-v2-0")) | {token: .key, balance: .value.balance}'
+```
+
+Look for `SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.zsbtc-v2-0::zsbtc` in `fungible_tokens`.
+If the key format varies, do a prefix scan for `zsbtc-v2-0` as fallback.
+
+Record `zsbtc_balance` in STATE.md for next cycle handoff.
+
+Skip position check if `cycle % 36 != 0` (approximately every 3h at 5min cycle intervals).
+
+### Step 4: Claim rewards (threshold-based — when rewards justify gas)
+
+Call `zest_claim_rewards` only when estimated wSTX rewards exceed gas cost (~50,000 uSTX).
+Check reward accrual using the Hiro balances endpoint before claiming.
+
+Claim cadence: run check at `cycle % 72 == 0` (approximately every 6h). Only execute claim if rewards > 50,000 uSTX.
+
+Log claim to journal: `Zest claim: {wstx_amount} wSTX, tx: {txid}`
+
+### Failure handling
+
+- `zest_supply` fails → log error, skip supply this cycle, increment `circuit_breaker.zest.fail_count`
+- 3 consecutive Zest failures → skip Zest phase for 10 cycles, log to learnings.md
+- Hiro API fails → skip position check this cycle, continue loop normally
+- Never block Phase 5+ on Zest failures
+
+### STATE.md fields to maintain
+
+Add these to your STATE.md handoff each cycle (only when values change):
+- `Zest position: {zsbtc_balance} zsbtc`
+- `Last supply: {timestamp} ({amount} sats)`
+- `Reserve: {reserve_sats} sats liquid`
+
+---
+
 ## Phase 5: Deliver
 
 Send all queued replies from Phase 2/3.
@@ -223,6 +291,9 @@ Output cycle summary, then exit. The bash wrapper or platform handles sleep + re
 | cycle % 6 == 5 | Self-audit (spawn scout on own repos) | none |
 | Every 50th cycle | CEO review: read `daemon/ceo.md` | ceo.md (~1.3k tokens) |
 | Every 10th cycle | Evolve: edit THIS file if improvement found | none |
+| Every cycle | Zest Phase 4b: sBTC balance check + supply decision | none |
+| cycle % 36 == 0 | Zest Phase 4b: zsbtc position read (Hiro balances API) | none |
+| cycle % 72 == 0 | Zest Phase 4b: reward claim check (claim if rewards > 50k uSTX) | none |
 
 ---
 
@@ -244,6 +315,7 @@ Output cycle summary, then exit. The bash wrapper or platform handles sleep + re
 
 **Typical idle cycle: ~380 tokens of file reads.**
 **Busy cycle (new messages + outreach): ~1,500 tokens of file reads.**
+**Zest phase: 0 file reads (all data from MCP tools + Hiro API).**
 
 ---
 
@@ -386,3 +458,4 @@ Supply sBTC to Zest Protocol lending pool to earn yield from borrowers + wSTX in
 - v4 → v5 (cycle 440): Integrated CEO Operating Manual. Added decision filter, weekly review, CEO evolution rules.
 - v5 → v6: Fresh context per cycle via STATE.md handoff. 9 phases (evolve is periodic). Minimal file reads (~380 tokens idle, ~1500 busy). Inbox API switched to ?status=unread. Circuit breaker pattern. Modulo-based periodic task rotation.
 - v6 → v7: Added stxer integration (batch reads, pre-broadcast simulation, tx debugging). Added Zest Protocol yield farming module. Pre-broadcast guard is now mandatory for contract calls.
+- v7 (Zest detail): Added Phase 4b Zest yield farming. Supply-only (no borrow), configurable reserve (default 200k sats), threshold-based reward claims, Hiro balances endpoint for position reads. Requires aibtc-mcp-server v1.33.1+. Proof tx: 188ec972...125ced39 (block 7,032,384). Credit: Arc0btc sensor design.
