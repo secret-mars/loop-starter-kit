@@ -19,6 +19,24 @@ Unlock wallet if STATE.md says locked. Load MCP tools if not present.
 
 ---
 
+## Phase 0: MCP Version Check
+
+Check if the MCP server has been updated since this loop started.
+
+```bash
+LATEST=$(curl -s https://api.github.com/repos/aibtcdev/aibtc-mcp-server/releases/latest | python3 -c "import sys,json; print(json.load(sys.stdin).get('tag_name','').replace('mcp-server-v',''))" 2>/dev/null)
+CACHED=$(python3 -c "import json; print(json.load(open('daemon/health.json')).get('mcp_version_cached','unknown'))" 2>/dev/null) || CACHED="unknown"
+[ -z "$CACHED" ] && CACHED="unknown"
+```
+
+- **First run** (`CACHED` is "unknown"): set `mcp_version_cached` to `LATEST` in health.json. Continue normally.
+- **Version match**: Set `mcp_update_required` to `false` in health.json (clears the flag after a restart). Continue normally.
+- **Version mismatch** (`LATEST` != `CACHED`): set `mcp_update_required: true` **and** `mcp_version_cached` to `LATEST` in health.json. Complete the current cycle normally, then in Phase 9 (Sleep), exit instead of sleeping with message: "MCP update detected ({CACHED} -> {LATEST}). Exiting for restart. Run /loop-start to resume with updated version."
+
+On curl failure (no internet, API rate limit): skip check, continue normally. Do not block the cycle on a version check failure.
+
+---
+
 ## Phase 1: Heartbeat
 
 Sign `"AIBTC Check-In | {timestamp}"` (fresh UTC .000Z).
@@ -165,6 +183,8 @@ This phase is WRITE-ONLY. No reads.
 ```json
 {"cycle":N,"timestamp":"ISO","status":"ok|degraded|error",
  "phases":{...},"stats":{...},"circuit_breaker":{...},
+ "mcp_version_cached":"x.y.z",
+ "mcp_update_required":false,
  "next_cycle_at":"ISO"}
 ```
 
@@ -207,7 +227,12 @@ Skip if nothing changed (rare — health.json always changes).
 
 ## Phase 9: Sleep
 
-Output cycle summary, then exit. The bash wrapper or platform handles sleep + restart.
+If `mcp_update_required` is true in health.json:
+1. Write STATE.md with: "MCP update detected ({CACHED} -> {LATEST}). Exiting for restart. Run /loop-start to resume with updated version."
+2. Log to journal: "MCP update detected ({CACHED} -> {LATEST}). Exiting for restart."
+3. Exit the loop (do NOT sleep and re-enter).
+
+Otherwise: output cycle summary, then exit normally. The bash wrapper or platform handles sleep + restart.
 
 ---
 
@@ -326,28 +351,91 @@ npm package: `stxer` (SimulationBuilder API). Docs: `https://api.stxer.xyz/docs`
 
 ---
 
-## Yield Farming with Zest Protocol (optional — for agents with sBTC)
+## Yield: Zest Protocol (optional — for agents with sBTC)
 
 Supply sBTC to Zest Protocol lending pool to earn yield from borrowers + wSTX incentive rewards.
+Supply-only by default — no borrowing (liquidation risk too high for a default template).
 
-### Setup
-- **Tools:** `zest_supply`, `zest_withdraw`, `zest_claim_rewards`, `zest_list_assets`
-- **Supply-only.** Do NOT borrow without operator approval (interest + liquidation risk).
-- Gas is negligible (~50k uSTX per tx). Pyth oracle fee ~2 uSTX.
+### Prerequisites
+- **MCP version:** v1.33.1+ required (`zest_supply` not available in older versions)
+- **Tools:** `sbtc_get_balance`, `zest_supply`, `zest_withdraw`, `zest_claim_rewards`, `zest_list_assets`
+- **Gas:** ~50k uSTX per tx (negligible). Pyth oracle fee ~2 uSTX.
 
-### Capital Allocation (adjust to your balance)
-- **Yield stack (Zest):** Majority of sBTC → lending pool for yield
-- **Liquid reserve:** Keep enough sBTC for operations (messages, inscriptions, trades)
-- **Revenue funnel:** Any earned sBTC → supply to Zest immediately
+### Configuration (set in health.json or operator config)
+```
+zest_reserve_sats: 200000       # Liquid reserve — do NOT supply below this (default 200k sats)
+zest_read_interval_min: 60      # Balance/position check cadence in minutes (default 60)
+zest_write_interval_min: 360    # Supply/claim cadence in minutes (default 6h)
+zest_claim_threshold_ustx: 50000 # Only claim rewards when > gas cost (default 50k uSTX)
+```
 
-### Yield Cycle (when bitcoin/yield pillar is active)
-1. **Check position** via stxer batch read (add `readonly` for `zsbtc-v2-0.get-balance`)
-2. **Check rewards** via stxer batch read (add `readonly` for `incentives-v2-2.get-vault-rewards`)
-   - Clarity-serialized args needed — see learnings for hex values
-   - Result > 0 → safe to claim. Result = 0 → skip (prevents `ERR_NO_REWARDS` abort).
-3. **Pre-simulate** claim/supply/withdraw via stxer before broadcasting
-4. **Broadcast** via MCP tool, then verify with `get_transaction_status`
-5. **ALWAYS verify tx status** — MCP returns success on broadcast, NOT on-chain confirmation
+### Boot Sensor (run once at cycle start, when yield sub-phase is active)
+
+1. **MCP version check** — verify `zest_supply` tool is available. If missing, log warning and skip entire yield sub-phase.
+2. **sBTC balance** — call `sbtc_get_balance`. Record as `sbtc_balance_sats`.
+3. **Compute excess** — `excess = sbtc_balance_sats - zest_reserve_sats`. If `excess <= 0`, skip auto-funnel (nothing to supply).
+
+### Auto-Funnel (read cadence: 30-60min, write cadence: 6h)
+
+Read checks run every `zest_read_interval_min`. Supply only runs every `zest_write_interval_min`.
+
+1. **Read check** — fetch sBTC balance. If `excess > 0`, flag `supply_ready = true`.
+2. **Write gate** — only proceed if `supply_ready = true` AND last supply was > `zest_write_interval_min` ago.
+3. **Pre-simulate** via stxer before broadcasting (mandatory):
+   ```bash
+   # Simulate zest_supply with excess amount
+   SIM_ID=$(curl -s -X POST "https://api.stxer.xyz/devtools/v2/simulations" \
+     -H "Content-Type: application/json" -d '{"skip_tracing":true}' \
+     | python3 -c "import sys,json;print(json.load(sys.stdin)['id'])")
+   # Check result — only proceed on "Ok"
+   ```
+4. **Supply** — call `zest_supply` with `excess` amount. Log tx to journal.
+5. **Verify** — call `get_transaction_status` to confirm on-chain success. MCP returns success on broadcast, NOT confirmation.
+
+### Position Check (via Hiro balances endpoint — simpler than read-only call)
+
+Use the Hiro balances API instead of `call_read_only_function` (no CV encoding needed):
+```bash
+curl -s "https://api.hiro.so/extended/v1/address/<YOUR_STX_ADDRESS>/balances" \
+  | python3 -c "
+import sys, json
+data = json.load(sys.stdin)
+ft = data.get('fungible_tokens', {})
+# Scan for zsbtc-v2-0 token (key format may vary)
+for key, val in ft.items():
+    if 'zsbtc-v2-0' in key:
+        print(f'Zest LP balance: {val[\"balance\"]} zsbtc')
+        break
+else:
+    print('No Zest position found')
+"
+```
+- Run every `zest_read_interval_min` (default 60min).
+- Record position in health.json or STATE.md for cycle handoff.
+- No gas cost (read-only HTTP call).
+- NOTE: `zest_get_position` MCP tool may be bugged (aibtcdev/aibtc-mcp-server#278). Use this endpoint instead.
+
+### Reward Claiming (threshold-based)
+
+wSTX rewards accrue continuously. Claim when profitable, not on a fixed schedule.
+
+1. **Check rewards** via stxer batch read:
+   ```bash
+   curl -s -X POST "https://api.stxer.xyz/sidecar/v2/batch" \
+     -H "Content-Type: application/json" \
+     -d '{"readonly":[["SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.incentives-v2-2","get-vault-rewards","<CLARITY_SERIALIZED_ARGS>"]]}'
+   ```
+   - Clarity-serialized args needed — see `memory/learnings.md` for hex values.
+   - Result > 0 = rewards available. Result = 0 = skip.
+2. **Threshold gate** — only claim if `rewards_ustx > zest_claim_threshold_ustx` (default 50k uSTX, roughly equal to gas cost).
+3. **Pre-simulate** claim via stxer. If `Err` → do NOT broadcast. Log and skip.
+4. **Broadcast** — call `zest_claim_rewards`. Verify with `get_transaction_status`.
+5. **IMPORTANT:** `zest_claim_rewards` broadcasts even when rewards = 0 → tx aborts on-chain with `ERR_NO_REWARDS (err u1000000000003)`. The threshold gate in step 2 prevents this.
+
+### Capital Allocation
+- **Yield stack (Zest):** All sBTC above `zest_reserve_sats` → lending pool for yield
+- **Liquid reserve:** `zest_reserve_sats` (default 200k sats) — kept for operations (messages, inscriptions, trades)
+- **Revenue funnel:** Any earned sBTC beyond reserve → supply to Zest on next write window
 
 ### Key Contracts
 - **sBTC:** `SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token`
@@ -357,9 +445,10 @@ Supply sBTC to Zest Protocol lending pool to earn yield from borrowers + wSTX in
 - **wSTX reward:** `SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.wstx`
 
 ### Pitfalls
-- `zest_claim_rewards` broadcasts even when rewards = 0 → tx aborts on-chain with `ERR_NO_REWARDS (err u1000000000003)`. **Always pre-check via get-vault-rewards read-only.**
-- `zest_get_position` MCP tool may be bugged (issue #278). Use `zsbtc-v2-0.get-balance` read-only instead.
-- MCP tools report `"success": true` on broadcast, NOT confirmation. Tx can abort on-chain. **Always verify with `get_transaction_status`.**
+- `zest_claim_rewards` broadcasts even when rewards = 0 → tx aborts with `ERR_NO_REWARDS`. Always pre-check via threshold gate.
+- `zest_get_position` MCP tool may be bugged (issue #278). Use the Hiro balances endpoint above instead.
+- MCP tools report `"success": true` on broadcast, NOT on-chain confirmation. Always verify with `get_transaction_status`.
+- Older MCP versions (< v1.33.1) do not have `zest_supply`. Boot sensor must check tool availability.
 
 ---
 
