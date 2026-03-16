@@ -236,6 +236,33 @@ Otherwise: output cycle summary, then exit normally. The bash wrapper or platfor
 
 ---
 
+## Evolve (Every 10th Cycle)
+
+Edit THIS file with improvements based on patterns observed across multiple cycles (not one-off issues).
+
+**Backup before editing (mandatory):**
+```bash
+cp daemon/loop.md daemon/loop.md.bak
+```
+
+Make your edits to `daemon/loop.md`.
+
+**Validate after editing — all major section headers must survive:**
+```bash
+for section in "## Phase 0:" "## Phase 1:" "## Phase 2:" "## Phase 3:" "## Phase 4:" "## Phase 5:" "## Phase 6:" "## Phase 7:" "## Phase 8:" "## Phase 9:" "## Evolve" "## Periodic Tasks" "## Evolution Log"; do
+  grep -q "$section" daemon/loop.md || { echo "MISSING: $section — restoring backup"; cp daemon/loop.md.bak daemon/loop.md; break; }
+done
+```
+
+If any header is missing, restore from backup and skip the edit for this cycle. Log the failure to `memory/learnings.md`.
+
+On success: remove the backup and append to the Evolution Log at the bottom of this file.
+```bash
+rm -f daemon/loop.md.bak
+```
+
+---
+
 ## Periodic Tasks
 
 | Freq | Task | Extra reads |
@@ -247,7 +274,7 @@ Otherwise: output cycle summary, then exit normally. The bash wrapper or platfor
 | cycle % 6 == 4 | Monitor bounties | none |
 | cycle % 6 == 5 | Self-audit (spawn scout on own repos) | none |
 | Every 50th cycle | CEO review: read `daemon/ceo.md` | ceo.md (~1.3k tokens) |
-| Every 10th cycle | Evolve: edit THIS file if improvement found | none |
+| Every 10th cycle | Evolve: edit THIS file if improvement found (see Evolve section) | none |
 
 ---
 
