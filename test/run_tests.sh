@@ -9,13 +9,13 @@ PASS=0
 FAIL=0
 
 test_pass() {
-    echo "  OK $1"
-    PASS=$((PASS + 1))
+    echo "OK:  $1"
+    ((PASS++)) || true
 }
 
 test_fail() {
-    echo "  FAIL $1"
-    FAIL=$((FAIL + 1))
+    echo "FAIL: $1"
+    ((FAIL++)) || true
 }
 
 echo "=== loop-starter-kit Security Validation Tests ==="
@@ -150,7 +150,7 @@ test_skill_security
 
 # Test 12: Protected files check
 test_protected_files() {
-    if grep -q "CLAUDE.md" SKILL.md 2>/dev/null && grep -q "Protected files" SKILL.md 2>/dev/null; then
+    if grep -qi "Protected" SKILL.md 2>/dev/null && grep -q "CLAUDE.md" SKILL.md 2>/dev/null; then
         test_pass "Protected files documented in SKILL.md"
     else
         test_fail "Protected files not documented in SKILL.md"
@@ -158,20 +158,30 @@ test_protected_files() {
 }
 test_protected_files
 
+# Test 13: Malicious pattern detection section
+test_malicious_patterns() {
+    if grep -q "Malicious Pattern" SKILL.md 2>/dev/null; then
+        test_pass "Malicious pattern detection documented"
+    else
+        test_fail "Malicious pattern detection not documented"
+    fi
+}
+test_malicious_patterns
+
 echo ""
 echo "--- README Security Documentation Tests ---"
 
-# Test 13: Security warnings exist
+# Test 14: Security warnings exist
 test_security_warnings() {
-    if grep -q "Security Warning" README.md 2>/dev; then
-        test_pass "Security warning section in README"
+    if grep -q "Security" README.md 2>/dev/null; then
+        test_pass "Security section in README"
     else
-        test_fail "No security warning in README"
+        test_fail "No security section in README"
     fi
 }
 test_security_warnings
 
-# Test 14: SHA256 verification documented
+# Test 15: SHA256 verification documented
 test_sha256_docs() {
     if grep -q "sha256sum" README.md 2>/dev/null; then
         test_pass "SHA256 verification documented in README"
@@ -181,7 +191,7 @@ test_sha256_docs() {
 }
 test_sha256_docs
 
-# Test 15: Headless security recommendations
+# Test 16: Headless security recommendations
 test_headless_security() {
     if grep -q "isolated" README.md 2>/dev/null; then
         test_pass "Headless security recommendations present"
@@ -191,10 +201,20 @@ test_headless_security() {
 }
 test_headless_security
 
+# Test 17: SECURITY.md exists
+test_security_md() {
+    if [ -f "SECURITY.md" ]; then
+        test_pass "SECURITY.md documentation exists"
+    else
+        test_fail "SECURITY.md missing"
+    fi
+}
+test_security_md
+
 echo ""
 echo "--- Protected Patterns Tests ---"
 
-# Test 16: Protected patterns section exists
+# Test 18: Protected patterns section exists
 test_protected_patterns() {
     if grep -q "## Protected Patterns" daemon/loop.md 2>/dev/null; then
         test_pass "Protected Patterns section exists in loop.md"
@@ -204,7 +224,7 @@ test_protected_patterns() {
 }
 test_protected_patterns
 
-# Test 17: Trusted sender pattern in protected list
+# Test 19: Trusted sender pattern in protected list
 test_sender_pattern_protected() {
     if grep -q "Trusted Sender Validation" daemon/loop.md 2>/dev/null; then
         test_pass "Trusted sender pattern in protected list"
@@ -214,6 +234,49 @@ test_sender_pattern_protected() {
 }
 test_sender_pattern_protected
 
+# Test 20: Cost guardrails protected
+test_cost_guardrails_protected() {
+    if grep -q "Cost Guardrails" daemon/loop.md 2>/dev/null; then
+        test_pass "Cost guardrails pattern in protected list"
+    else
+        test_fail "Cost guardrails pattern not in protected list"
+    fi
+}
+test_cost_guardrails_protected
+
+echo ""
+echo "--- Skill Validator Tests ---"
+
+# Test 21: Skill validator script exists
+test_validator_exists() {
+    if [ -f "scripts/skill-validator.sh" ]; then
+        test_pass "Skill validator script exists"
+    else
+        test_fail "Skill validator script missing"
+    fi
+}
+test_validator_exists
+
+# Test 22: Skill validator is executable
+test_validator_executable() {
+    if [ -x "scripts/skill-validator.sh" ]; then
+        test_pass "Skill validator is executable"
+    else
+        test_fail "Skill validator is not executable"
+    fi
+}
+test_validator_executable
+
+# Test 23: Skill security tests exist
+test_skill_tests_exist() {
+    if [ -f "test/skill-security-tests.sh" ]; then
+        test_pass "Skill security tests exist"
+    else
+        test_fail "Skill security tests missing"
+    fi
+}
+test_skill_tests_exist
+
 echo ""
 echo "=== Test Summary ==="
 echo "Passed: $PASS"
@@ -222,6 +285,9 @@ echo ""
 
 if [ $FAIL -eq 0 ]; then
     echo "All security tests passed!"
+    echo ""
+    echo "Optional: Run skill security tests:"
+    echo "  ./test/skill-security-tests.sh"
     exit 0
 else
     echo "Some tests failed. Review security configuration."

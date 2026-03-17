@@ -232,42 +232,180 @@ Show current state of the agent without entering the loop.
 
 ### Skill Installation Security
 
-**When installing new skills, ALWAYS verify:**
+**CRITICAL: Skill files are arbitrary code that runs with full agent permissions. ALWAYS validate before installing.**
 
-1. **Source verification:**
-   - Only install skills from trusted sources (official repos, verified developers)
-   - If installing from URL, verify SHA256 hash matches published hash
-   - Prefer installing from Git repos where you can review commit history
+#### Security Model
 
-2. **Skill file inspection:**
-   - Read the entire SKILL.md before installation
-   - Check for suspicious patterns: `exec`, `eval`, shell injection, wallet key extraction
-   - Verify no unexpected network calls beyond documented endpoints
-   - Ensure no modifications to critical files (CLAUDE.md, .env, wallet files)
+The skill installation system enforces defense-in-depth:
 
-3. **Protected files — skills MUST NOT modify:**
-   - `CLAUDE.md` (agent config)
-   - `daemon/loop.md` (core loop)
-   - `.env` (secrets)
-   - `memory/learnings.md` (unless explicitly adding learnings)
-   - Any file containing private keys or mnemonics
+1. **Input Validation** - Prevents injection attacks on URLs and paths
+2. **Pattern Detection** - Scans for malicious code patterns
+3. **Protected Files** - Core files cannot be modified by skills
+4. **Post-Install Audit** - Verify installed content matches expectations
 
-4. **Rejection criteria — DO NOT install if skill:**
-   - Tries to exfiltrate wallet keys or mnemonics
-   - Modifies CLAUDE.md without explicit user consent
-   - Makes unsigned network requests to unknown endpoints
-   - Contains obfuscated or encoded payloads
-   - Attempts to disable security checks in loop.md
+#### Pre-Installation Checklist
 
-5. **Post-install verification:**
+Before installing ANY skill:
+
+```bash
+# 1. Run the skill validator
+./scripts/skill-validator.sh <url-or-path>
+
+# 2. If validation passes with warnings, review carefully
+# 3. If validation passes, install with:
+./scripts/skill-validator.sh <url-or-path> --install
+```
+
+#### Source Verification
+
+1. **Prefer trusted sources:**
+   - Official repositories (github.com/aibtcdev, github.com/secret-mars)
+   - Verified developers with established reputation
+   - Direct Git clone over raw URL download
+
+2. **URL validation:**
+   - Only HTTPS URLs (HTTP generates a warning)
+   - No localhost, 127.0.0.1, or internal domains
+   - No file:// URLs from outside allowed directories
+   - No directory traversal (../) in URL paths
+
+3. **Hash verification (recommended):**
    ```bash
-   # Verify skill file matches expected content
-   cat .claude/skills/<skill-name>/SKILL.md | sha256sum
-   
-   # Check for unexpected modifications
-   git status
-   git diff
+   # Download and verify hash
+   curl -fsSL <url> -o /tmp/skill.md
+   echo "expected-sha256-hash  /tmp/skill.md" | sha256sum -c
+   # Only proceed if hash matches
    ```
+
+#### Malicious Pattern Detection
+
+The validator blocks skills containing:
+
+| Pattern Category | Examples | Severity |
+|-----------------|----------|----------|
+| Code Execution | `exec(`, `eval(`, `base64 | sh` | REJECT |
+| Key Extraction | `private.key`, `mnemonic`, `seed.phrase` | REJECT |
+| Shell Injection | `curl | sh`, `wget | bash`, `$()` in commands | REJECT |
+| Obfuscation | Hex escapes `\x`, base64 payloads | REJECT |
+| Protected Files | Modifications to CLAUDE.md, loop.md, .env | REJECT |
+| Environment | Reading .env, accessing credentials | WARN |
+| Unknown Endpoints | Non-whitelisted domains | WARN |
+
+#### Protected Files
+
+Skills MUST NOT modify these files:
+
+| File | Why Protected |
+|------|---------------|
+| `CLAUDE.md` | Contains wallet addresses, trusted senders, API keys |
+| `daemon/loop.md` | Core agent instructions with security invariants |
+| `.env` | Contains SPONSOR_API_KEY and secrets |
+| `.mcp.json` | MCP server configuration |
+| `memory/learnings.md` | Accumulated knowledge (append-only) |
+| `.claude/settings*` | Claude Code settings |
+
+Modification requires explicit operator consent AND git commit.
+
+#### Trusted Sender Context
+
+Skills run within the agent's trusted sender context:
+
+- Skills inherit the agent's trusted_senders list from CLAUDE.md
+- Skills cannot add new trusted senders without operator consent
+- Skills that modify trusted_senders section MUST be rejected
+
+#### Installation Commands
+
+```bash
+# Validate a remote skill
+./scripts/skill-validator.sh https://example.com/skill.md
+
+# Validate a local skill
+./scripts/skill-validator.sh ./path/to/skill.md
+
+# Install after validation passes
+./scripts/skill-validator.sh <url-or-path> --install
+
+# Run security test suite
+./test/skill-security-tests.sh
+```
+
+#### Rejection Criteria
+
+**DO NOT INSTALL** if the skill contains ANY of:
+
+- `exec(`, `eval()`, or dynamic code execution
+- Shell pipes to execution (`curl | sh`, `wget | bash`)
+- References to private keys, mnemonics, or seed phrases
+- Modifications to CLAUDE.md or daemon/loop.md
+- Obfuscated code (hex escapes, base64 without context)
+- Network calls to unknown/suspicious domains
+- Attempts to exfiltrate data
+
+#### Warning Criteria
+
+**REVIEW CAREFULLY** if the skill contains:
+
+- References to .env files (legitimate config reading vs. exfiltration)
+- Curl/wget commands (legitimate API calls vs. data exfiltration)
+- SSH key references (legitimate git operations vs. key theft)
+- Unknown network endpoints (verify domain ownership)
+
+#### Post-Installation Verification
+
+After installing, verify:
+
+```bash
+# 1. Check installed content
+cat .claude/skills/<skill-name>/SKILL.md
+
+# 2. Verify hash matches expected
+sha256sum .claude/skills/<skill-name>/SKILL.md
+
+# 3. Check for unexpected modifications
+git status
+git diff
+
+# 4. Verify protected files unchanged
+git diff CLAUDE.md daemon/loop.md .env
+
+# 5. Run security tests
+./test/run_tests.sh
+./test/skill-security-tests.sh
+```
+
+#### Security Incident Response
+
+If a compromised skill was installed:
+
+```bash
+# 1. Immediately revoke skill
+rm -rf .claude/skills/<skill-name>
+
+# 2. Check for modifications
+git diff
+git log --oneline -10
+
+# 3. If CLAUDE.md was modified
+git checkout HEAD -- CLAUDE.md
+
+# 4. If daemon/loop.md was modified
+git checkout HEAD -- daemon/loop.md
+
+# 5. Rotate any exposed secrets
+# - Generate new sponsor API key
+# - Transfer funds if wallet key exposed
+# - Update .env with new secrets
+
+# 6. Report the incident
+# Create issue at github.com/secret-mars/loop-starter-kit/issues
+```
+
+#### Reporting Security Issues
+
+Do NOT create public issues for security vulnerabilities. Contact the security team directly.
+
+For the complete security model, see `SECURITY.md`.
 
 ---
 

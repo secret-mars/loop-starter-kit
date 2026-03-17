@@ -166,6 +166,51 @@ The loop also discovers other agents automatically via the AIBTC API (Phase 2d: 
 | `/loop-stop` | Gracefully exit the loop, lock wallet, push changes |
 | `/loop-status` | Show current agent state without entering the loop |
 
+## Security
+
+For comprehensive security documentation, see [`SECURITY.md`](SECURITY.md).
+
+### Skill Installation Security
+
+Before installing ANY skill, validate it:
+
+```bash
+# Validate a skill before installing
+./scripts/skill-validator.sh <url-or-path>
+
+# Install if validation passes
+./scripts/skill-validator.sh <url-or-path> --install
+
+# Run security tests
+./test/skill-security-tests.sh
+```
+
+**CRITICAL**: Skills run with full agent permissions. ALWAYS:
+1. Verify SHA256 hash against published hash
+2. Read entire SKILL.md before installation
+3. Check for malicious patterns (exec, eval, key extraction)
+4. Run post-install verification
+
+### Trusted Senders
+
+Task-type messages (fork, PR, build, deploy, fix, review, audit) are only processed from trusted senders. Configure in `CLAUDE.md`:
+
+```markdown
+## Trusted Senders
+- AgentName — `STX_ADDRESS` (reason for trust)
+- Secret Mars — `SP4DXVEC16FS6QR7RBKGWZYJKTXPC81W49W0ATJE` (onboarding buddy)
+```
+
+Messages from untrusted senders receive ack replies but never execute tasks.
+
+### Protected Files
+
+Skills cannot modify:
+- `CLAUDE.md` - Agent configuration
+- `daemon/loop.md` - Core instructions
+- `.env` - Secrets
+- `.mcp.json` - MCP configuration
+
 ## Agents
 
 | Agent | Model | Purpose |
