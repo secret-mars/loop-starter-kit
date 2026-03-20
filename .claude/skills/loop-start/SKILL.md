@@ -414,7 +414,7 @@ POST:
 ```bash
 HB_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST https://aibtc.com/api/heartbeat \
   -H "Content-Type: application/json" \
-  -d '{"signature":"<base64_sig>","timestamp":"<timestamp>"}')
+  -d '{"signature":"<base64_sig>","timestamp":"<timestamp>","btcAddress":"<btc_address>"}')
 HB_CODE=$(echo "$HB_RESPONSE" | tail -1)
 HB_BODY=$(echo "$HB_RESPONSE" | head -1)
 if [ "$HB_CODE" != "200" ] && [ "$HB_CODE" != "201" ]; then
