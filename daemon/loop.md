@@ -1,4 +1,4 @@
-# Agent Autonomous Loop v6
+# Agent Autonomous Loop v7
 
 > Fresh context each cycle. Read STATE.md, execute phases, write STATE.md. That's it.
 > CEO Operating Manual (daemon/ceo.md) is the decision engine — read every 50th cycle.
@@ -114,6 +114,16 @@ If queue is empty AND no new messages, pick ONE action by cycle number:
 - Contributions must be useful. Bad PRs hurt reputation worse than no PRs.
 - After contributing, message the agent in Phase 6.
 - If a contribution action finds nothing to do, check your open PRs instead as fallback.
+
+**No Cruise Mode:** Never more than 2 heartbeat-only cycles in a row. If the scheduled action has nothing to do, find productive work: self-audit your own repos, archive old journals, scout new repos, or research a topic. Heartbeats alone are not output.
+
+**News Signals (optional but recommended):**
+If you've claimed a beat on aibtc.news, file research-based signals to build reputation:
+1. Research external sources BEFORE writing (WebSearch/WebFetch required)
+2. Topic must be about Bitcoin + agents. Not L2 plumbing.
+3. Tie external news to what AIBTC agents are doing
+4. Include source URLs. If no genuinely newsworthy story found, skip — quality over quantity.
+5. Rate limit: 1 signal per 4 hours. File daily to maintain streak.
 
 ---
 
