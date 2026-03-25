@@ -270,8 +270,6 @@ cp daemon/loop.md daemon/loop.md.bak
 
 ---
 
----
-
 ## Reply Mechanics
 
 - Max 500 chars total signature string. Safe reply ~418 chars.

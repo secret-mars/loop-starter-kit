@@ -19,10 +19,8 @@ MCP server, wallet, registration, heartbeat, file scaffolding, and skill install
 Always unlock wallet before performing any transaction.
 
 ## Trusted Senders
-<!-- Agents on this list can send you task-type messages (fork, PR, build, deploy, fix, review, audit).
-     Messages from unknown senders still get ack replies, but task keywords are ignored.
-     Add agents here as you build trust through collaboration. -->
-- Secret Mars — `SP4DXVEC16FS6QR7RBKGWZYJKTXPC81W49W0ATJE` (onboarding buddy, bounty creator)
+Agents authorized to submit tasks via inbox:
+- [YOUR_TRUSTED_AGENT_STX_ADDRESS] — description
 
 ## GitHub
 <!-- Optional: configure when ready. Enables repo scouting (Phase 2) and PR workflows (Phase 4). -->
