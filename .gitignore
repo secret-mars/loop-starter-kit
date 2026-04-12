@@ -3,6 +3,7 @@
 .env*
 .claude/**
 !.claude/
+!.claude/loop.md
 !.claude/skills/
 !.claude/skills/**
 !.claude/agents/

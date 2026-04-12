@@ -33,17 +33,17 @@ Always unlock wallet before performing any transaction.
 
 ## Autonomous Loop Architecture
 
-Claude IS the agent. No subprocess, no daemon. `/loop-start` enters a perpetual loop:
+Claude IS the agent. `/loop-start` enters the native `/loop` with `ScheduleWakeup`-based cycling:
 
-1. Read `daemon/STATE.md` + `daemon/health.json` — minimal startup context
-2. Read `daemon/loop.md` — the self-updating agent prompt
-3. Follow every phase in order (heartbeat through sleep)
-4. Write `daemon/STATE.md` at end of every cycle — handoff to next cycle
-5. Sleep 5 minutes, then re-read and repeat
-6. `/loop-stop` exits the loop, locks wallet, syncs to git
+1. `.claude/loop.md` — compact cycle prompt (loaded by native /loop mechanism)
+2. `daemon/pillars/` — modular pillar instructions (tasks, contribute, discover, yield, news)
+3. After each cycle, `ScheduleWakeup(300)` schedules the next (5 min default)
+4. `/loop-stop` saves state, syncs git, exits the loop
 
 ### Key Files
-- `daemon/loop.md` — Self-updating cycle instructions (the living brain)
+- `.claude/loop.md` — Native loop prompt (compact, ~120 lines)
+- `daemon/pillars/*.md` — Pillar instructions loaded on-demand
+- `daemon/loop.md` — Legacy full reference (NOT loaded during cycles)
 - `daemon/STATE.md` — Inter-cycle handoff (max 10 lines, updated every cycle)
 - `daemon/health.json` — Cycle count, phase status, circuit breaker state
 - `daemon/queue.json` — Task queue extracted from inbox messages
@@ -57,17 +57,20 @@ Claude IS the agent. No subprocess, no daemon. `/loop-start` enters a perpetual 
 - **Send (PAID):** Use `send_inbox_message` MCP tool — 100 sats sBTC per message
 - **Docs:** https://aibtc.com/llms-full.txt
 
-## Memory
-- `memory/journal.md` — Session logs and decisions
-- `memory/contacts.md` — People and agents I interact with
-- `memory/learnings.md` — Accumulated knowledge from tasks
+## Memory (Tiered Writes)
+- `daemon/STATE.md` — Inter-cycle handoff (max 10 lines, MANDATORY every cycle)
+- `daemon/health.json` — Cycle stats (MANDATORY every cycle)
+- `memory/journal.md` — Session logs (ONLY when cycle produced real output)
+- `memory/contacts.md` — Agents (ONLY when interacted with agent)
+- `memory/learnings.md` — Knowledge from errors (ONLY when something new learned)
+- **Do NOT dual-write** to auto-memory. Let Claude's built-in auto-memory handle `~/.claude/` automatically.
 
 ## Self-Learning Rules
-- **Fresh context each cycle**: Only read STATE.md + health.json at cycle start. Read other files only when a specific phase requires it.
-- **Track processed messages**: Write replied message IDs to daemon/processed.json to avoid duplicates
-- **Learn from errors**: If an API call fails or something unexpected happens, append what you learned to `memory/learnings.md`
-- **Evolve**: Every 10th cycle, edit `daemon/loop.md` to improve instructions based on patterns (not one-off issues)
-- **Never repeat mistakes**: If learnings.md says something doesn't work, don't try it again
+- **Boot reads**: STATE.md + health.json at cycle start. Everything else on-demand.
+- **Track processed messages**: Write replied message IDs to daemon/processed.json
+- **Learn from errors**: Append to `memory/learnings.md`. If permanent, update CLAUDE.md.
+- **Evolve**: Every 10th cycle (if cycle >= 10), edit `daemon/loop.md` with pattern improvements.
+- **Never repeat mistakes**: Check learnings before retrying failed operations.
 
 ## Context Compaction Instructions
 
