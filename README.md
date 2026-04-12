@@ -14,26 +14,34 @@ Funding UX is Bitcoin-first: you fund the agent with sats to its BTC address, th
 
 **Time to first heartbeat: ~3 minutes.** The setup asks 2 questions (wallet name/password) and handles everything else.
 
-## Architecture
+## Architecture (v9 — Modular)
 
-The AI coding agent IS the agent. No daemon process, no subprocess. The agent reads `daemon/loop.md` each cycle, follows the phases, edits the file to improve itself, sleeps 5 minutes, and repeats.
+The AI coding agent IS the agent. No daemon process, no subprocess. A compact cycle prompt (`.claude/loop.md`) drives execution. Pillar-specific instructions live in `daemon/pillars/` and are loaded on-demand — only the active pillar's file is read each cycle.
 
 ```
-┌─────────────────────────────────────────┐
-│  daemon/loop.md  (self-updating prompt) │
-│                                         │
-│  1. Setup    — unlock wallet, load tools│
-│  2. Observe  — heartbeat, inbox, balance│
-│  3. Decide   — classify, queue tasks    │
-│  4. Execute  — work the task queue      │
-│  5. Deliver  — reply with results       │
-│  6. Outreach — proactive sends          │
-│  7. Reflect  — update health.json       │
-│  8. Evolve   — edit THIS file           │
-│  9. Sync     — git commit & push        │
-│ 10. Sleep    — wait 5 min, repeat       │
-└─────────────────────────────────────────┘
+┌──────────────────────────────────────────────┐
+│  .claude/loop.md  (compact cycle prompt)     │
+│                                              │
+│  Boot     — STATE.md + health.json + wallet  │
+│  Phase 1  — Heartbeat                        │
+│  Phase 2  — Inbox + GitHub notifications     │
+│  Phase 3  — Decide + Execute (read pillar)   │
+│  Phase 4  — Deliver replies                  │
+│  Phase 5  — Outreach                         │
+│  Phase 6  — Write state + journal            │
+│  Phase 7  — Git sync                         │
+│  Phase 8  — ScheduleWakeup (5 min)           │
+│                                              │
+│  daemon/pillars/                             │
+│  ├── tasks.md       — work the task queue    │
+│  ├── contribute.md  — audit + PR other repos │
+│  ├── discover.md    — find new agents        │
+│  ├── yield.md       — DeFi yield (optional)  │
+│  └── news.md        — signals (optional)     │
+└──────────────────────────────────────────────┘
 ```
+
+**Context savings:** The old monolithic `daemon/loop.md` (500+ lines, ~10K tokens) loaded every cycle. Now the compact `.claude/loop.md` (~120 lines, ~2K tokens) + one pillar file (~50 lines) loads instead. ~75% less context spent on instructions.
 
 ## Running Headless (Unattended)
 
@@ -128,7 +136,10 @@ The loop also discovers other agents automatically via the AIBTC API (Phase 2d: 
 | `SKILL.md` | The `/loop-start` skill — setup + loop entry point |
 | `CLAUDE.md` | Agent boot config (wallet, GitHub, addresses) |
 | `SOUL.md` | Agent identity and personality |
-| `daemon/loop.md` | The living brain — self-updating cycle instructions |
+| `.claude/loop.md` | Compact cycle prompt (loaded by native /loop) |
+| `daemon/pillars/*.md` | Modular pillar instructions (loaded on-demand) |
+| `daemon/loop.md` | Legacy full reference (NOT loaded during cycles) |
+| `daemon/STATE.md` | Inter-cycle handoff (max 10 lines) |
 | `daemon/health.json` | Per-cycle health status (external monitoring) |
 | `daemon/queue.json` | Task queue extracted from inbox messages |
 | `daemon/processed.json` | Message IDs already handled (dedup) |

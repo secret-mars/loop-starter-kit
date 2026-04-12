@@ -571,7 +571,7 @@ user_invocable: true
 If any of these files are missing, tell the user to re-run setup (`curl -fsSL drx4.xyz/install | sh` then `/loop-start`):
 - `CLAUDE.md`
 - `SOUL.md`
-- `daemon/loop.md`
+- `.claude/loop.md`
 - `memory/learnings.md`
 
 If all exist, proceed to Enter the Loop.
@@ -581,24 +581,23 @@ If all exist, proceed to Enter the Loop.
 ### Execution Mode
 
 - **`OPENCLAW_CRON` set**: Single-cycle — run ONE cycle, write health.json, exit.
-- **Otherwise**: Perpetual — loop with `sleep 300` between cycles.
+- **Otherwise**: Native loop — use ScheduleWakeup for cycle scheduling.
 
 ### Loop Entry
 
 1. Read `CLAUDE.md` for boot config (wallet, addresses, GitHub)
 2. Read `SOUL.md` for identity
-3. Read `daemon/loop.md` — your self-updating prompt
-4. Each cycle: read `daemon/STATE.md` + `daemon/health.json` (~380 tokens), then execute all phases
-5. Write `daemon/STATE.md` at end of every cycle — handoff to next cycle
-6. Edit `daemon/loop.md` with improvements every 10th cycle (if cycle >= 10)
-7. **Perpetual:** Sleep 5 min, re-read `daemon/loop.md`, repeat
-8. **Single-cycle:** Exit after one cycle
-9. Never stop unless user interrupts or runs `/loop-stop`
+3. Read `.claude/loop.md` — your cycle instructions
+4. Each cycle: read `daemon/STATE.md` + `daemon/health.json`, then execute all phases
+5. Active pillar instructions in `daemon/pillars/*.md` — read only the active one
+6. After each cycle: `ScheduleWakeup(delaySeconds: 300, prompt: "<<autonomous-loop-dynamic>>")`
+7. **Single-cycle (OpenClaw):** Exit after one cycle
+8. Never stop unless user interrupts or runs `/loop-stop`
 
 ## Important
 
 - You ARE the agent. No daemon process.
-- `daemon/loop.md` is your living instruction set.
+- `.claude/loop.md` is your cycle prompt. `daemon/loop.md` is legacy reference.
 - `daemon/STATE.md` is the inter-cycle handoff — max 10 lines.
 - If wallet locks, re-unlock via `mcp__aibtc__wallet_unlock`.
 - If MCP tools unload, re-load via ToolSearch.
@@ -615,40 +614,42 @@ After writing the slim version, fall through to **Enter the Loop** below.
 Detect the execution environment before entering the loop:
 
 - **If `OPENCLAW_CRON` environment variable is set**, or the session has a fixed duration limit:
-  → **Single-cycle mode**: Run ONE complete cycle through all phases, write health.json, then exit cleanly. Do not sleep or loop.
+  → **Single-cycle mode**: Run ONE complete cycle through all phases, write health.json, then exit cleanly.
 - **Otherwise** (Claude Code, interactive session):
-  → **Perpetual mode**: Enter the full loop with sleep 300 between cycles.
+  → **Native loop mode**: Use `ScheduleWakeup` for cycle scheduling (no bash sleep).
 
 ### Placeholder Validation
 
 Before entering the loop, verify no unfilled placeholders remain:
 ```bash
-UNFILLED=$(grep -rn '{AGENT_\|{YOUR_\|\[YOUR_' CLAUDE.md daemon/loop.md 2>/dev/null)
+UNFILLED=$(grep -rn '{AGENT_\|{YOUR_\|\[YOUR_' CLAUDE.md .claude/loop.md 2>/dev/null)
 if [ -n "$UNFILLED" ]; then
   echo "ERROR: Unfilled placeholders found — fix these before starting the loop:"
   echo "$UNFILLED"
   exit 1
 fi
 ```
-If any matches are found, print them and stop. Do NOT enter the loop with unfilled placeholders — they will cause runtime failures (wrong addresses, broken signing, etc.).
+If any matches are found, print them and stop.
 
 ### Loop Entry
 
 1. Read `CLAUDE.md` for boot configuration (wallet name, addresses, GitHub)
 2. Read `SOUL.md` for identity context
-3. Read `daemon/loop.md` — this is your self-updating prompt
+3. Read `.claude/loop.md` — your cycle instructions
 4. Each cycle: read `daemon/STATE.md` + `daemon/health.json` (~380 tokens), then execute all phases
-5. Write `daemon/STATE.md` at end of every cycle — handoff to next cycle
-6. Every 10th cycle (if cycle >= 10): edit `daemon/loop.md` with improvements
-7. **Perpetual mode:** Sleep 5 minutes (`sleep 300`), re-read `daemon/loop.md`, repeat
-8. **Single-cycle mode:** Exit after one complete cycle
-9. Never stop unless the user interrupts or runs `/loop-stop`
+5. Pillar instructions are in `daemon/pillars/*.md` — read ONLY the active pillar file each cycle
+6. Write `daemon/STATE.md` at end of every cycle — handoff to next cycle
+7. Every 10th cycle (if cycle >= 10): edit `daemon/loop.md` with improvements
+8. **Native loop mode:** After each cycle, call `ScheduleWakeup(delaySeconds: 300, prompt: "<<autonomous-loop-dynamic>>")`
+9. **Single-cycle mode:** Exit after one complete cycle
+10. Never stop unless the user interrupts or runs `/loop-stop`
 
 ## Important
 
 - You ARE the agent. There is no daemon process.
-- `daemon/loop.md` is your living instruction set.
+- `.claude/loop.md` is your cycle prompt. `daemon/loop.md` is the legacy reference (not loaded during cycles).
+- `daemon/pillars/*.md` contain pillar-specific instructions — loaded on-demand.
 - `daemon/STATE.md` is the inter-cycle handoff — max 10 lines, updated every cycle.
-- Only read STATE.md + health.json at cycle start (~380 tokens). Read other files only when a specific phase requires it.
-- If wallet locks between cycles, re-unlock it via `mcp__aibtc__wallet_unlock`.
-- If MCP tools unload, re-load them via ToolSearch.
+- Only read STATE.md + health.json at cycle start (~380 tokens). Read pillar files only for the active pillar.
+- If wallet locks between cycles, re-unlock via `mcp__aibtc__wallet_unlock`.
+- If MCP tools unload, re-load via ToolSearch.
