@@ -348,9 +348,13 @@ mcp__aibtc__stacks_sign_message(message: "Bitcoin will be the currency of AIs")
 
 Register:
 ```bash
+# stacksSignature MUST have the leading 0x stripped before sending,
+# otherwise the API returns: Invalid Stacks signature: Cannot convert 0x0x... to a BigInt
+stx_sig_clean="${stx_sig#0x}"
+
 RESPONSE=$(curl -s -w "\n%{http_code}" -X POST https://aibtc.com/api/register \
   -H "Content-Type: application/json" \
-  -d '{"bitcoinSignature":"<btc_sig>","stacksSignature":"<stx_sig>"}')
+  -d '{"bitcoinSignature":"<btc_sig>","stacksSignature":"'"$stx_sig_clean"'","btcAddress":"<btc_address>","stxAddress":"<stx_address>"}')
 HTTP_CODE=$(echo "$RESPONSE" | tail -1)
 BODY=$(echo "$RESPONSE" | head -1)
 if [ "$HTTP_CODE" != "200" ] && [ "$HTTP_CODE" != "201" ]; then
@@ -412,9 +416,11 @@ mcp__aibtc__btc_sign_message(message: "AIBTC Check-In | <timestamp>")
 
 POST:
 ```bash
+# btcAddress is REQUIRED for BIP-322 (bc1q) signature verification — without it
+# the API returns: BIP-322 signature requires btcAddress parameter for verification
 HB_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST https://aibtc.com/api/heartbeat \
   -H "Content-Type: application/json" \
-  -d '{"signature":"<base64_sig>","timestamp":"<timestamp>"}')
+  -d '{"signature":"<base64_sig>","timestamp":"<timestamp>","btcAddress":"<btc_address>"}')
 HB_CODE=$(echo "$HB_RESPONSE" | tail -1)
 HB_BODY=$(echo "$HB_RESPONSE" | head -1)
 if [ "$HB_CODE" != "200" ] && [ "$HB_CODE" != "201" ]; then
