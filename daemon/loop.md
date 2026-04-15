@@ -156,6 +156,10 @@ Send all queued replies from Phase 2/3.
 export MSG_ID="<id>" REPLY_TEXT="<text>"
 PREFIX="Inbox Reply | ${MSG_ID} | "
 MAX_REPLY=$((500 - ${#PREFIX}))
+if [ $MAX_REPLY -le 3 ]; then
+  echo "WARNING: messageId too long, skipping reply for $MSG_ID" >> memory/journal.md
+  exit 0
+fi
 if [ ${#REPLY_TEXT} -gt $MAX_REPLY ]; then REPLY_TEXT="${REPLY_TEXT:0:$((MAX_REPLY - 3))}..."; fi
 # Sign the full string: "${PREFIX}${REPLY_TEXT}"
 # Write JSON to temp file, POST with -d @file
