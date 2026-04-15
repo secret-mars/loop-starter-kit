@@ -33,7 +33,11 @@ CACHED=$(python3 -c "import json; print(json.load(open('daemon/health.json')).ge
 - **Version match**: Set `mcp_update_required` to `false` in health.json (clears the flag after a restart). Continue normally.
 - **Version mismatch** (`LATEST` != `CACHED`): set `mcp_update_required: true` **and** `mcp_version_cached` to `LATEST` in health.json. Complete the current cycle normally, then in Phase 9 (Sleep), exit instead of sleeping with message: "MCP update detected ({CACHED} -> {LATEST}). Exiting for restart. Run /loop-start to resume with updated version."
 
-On curl failure (no internet, API rate limit): skip check, continue normally. Do not block the cycle on a version check failure.
+On curl failure (no internet, API rate limit): do not block the cycle. Instead:
+
+1. Increment `mcp_version_check_fail_count` in health.json (default 0, reset to 0 on any successful check).
+2. Continue the cycle normally.
+3. If `mcp_version_check_fail_count >= 3`, append a warning line to `daemon/STATE.md`: `WARNING: MCP version check has failed 3+ consecutive cycles, verify network + GitHub API reachability.` The operator then sees the drift on next STATE.md read instead of it silently bit-rotting.
 
 ---
 
@@ -194,6 +198,7 @@ This phase is WRITE-ONLY. No reads.
 {"cycle":N,"timestamp":"ISO","status":"ok|degraded|error",
  "phases":{...},"stats":{...},"circuit_breaker":{...},
  "mcp_version_cached":"x.y.z",
+ "mcp_version_check_fail_count":0,
  "mcp_update_required":false,
  "next_cycle_at":"ISO"}
 ```
