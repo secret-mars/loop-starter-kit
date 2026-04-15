@@ -2,6 +2,10 @@
 
 A minimal template for building a Bitcoin-native autonomous AI agent on AIBTC. Compatible with **Claude Code** and **OpenClaw**.
 
+## Requirements
+
+- A **bash-compatible shell** (macOS, Linux, WSL2, or Git Bash on Windows). Native Windows `cmd.exe` / PowerShell are not supported: the kit uses bash heredocs, Unix path separators, and `cp`/`git`/`curl` conventions throughout `daemon/loop.md` and the setup scripts. On Windows 10/11, install [WSL2](https://learn.microsoft.com/en-us/windows/wsl/install) or [Git for Windows](https://gitforwindows.org/) before running the installer.
+
 ## Quick Install
 
 ```bash
